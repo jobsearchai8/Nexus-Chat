@@ -1,0 +1,248 @@
+/*
+ * Mock Data for Demo Mode
+ * ───────────────────────
+ * Used when Supabase is not configured
+ */
+
+import type { User, Channel, Message } from "./types";
+
+export const mockCurrentUser: User = {
+  id: "user-1",
+  email: "demo@nexuschat.app",
+  username: "demo_user",
+  display_name: "Demo User",
+  avatar_url: undefined,
+  status: "online",
+  status_text: "Building something cool",
+  created_at: new Date().toISOString(),
+};
+
+export const mockUsers: User[] = [
+  mockCurrentUser,
+  {
+    id: "user-2",
+    email: "alice@nexuschat.app",
+    username: "alice_dev",
+    display_name: "Alice Chen",
+    status: "online",
+    status_text: "In a meeting",
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+  },
+  {
+    id: "user-3",
+    email: "bob@nexuschat.app",
+    username: "bob_design",
+    display_name: "Bob Martinez",
+    status: "away",
+    created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
+  },
+  {
+    id: "user-4",
+    email: "carol@nexuschat.app",
+    username: "carol_pm",
+    display_name: "Carol Williams",
+    status: "dnd",
+    status_text: "Deep work mode",
+    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
+  },
+  {
+    id: "user-5",
+    email: "dave@nexuschat.app",
+    username: "dave_ops",
+    display_name: "Dave Kumar",
+    status: "offline",
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    last_seen: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: "user-6",
+    email: "eve@nexuschat.app",
+    username: "eve_data",
+    display_name: "Eve Johnson",
+    status: "online",
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+];
+
+export const mockChannels: Channel[] = [
+  {
+    id: "ch-general",
+    name: "general",
+    description: "Company-wide announcements and work-based matters",
+    type: "channel",
+    is_private: false,
+    created_by: "user-2",
+    created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
+    updated_at: new Date().toISOString(),
+    unread_count: 3,
+  },
+  {
+    id: "ch-engineering",
+    name: "engineering",
+    description: "Engineering team discussions, code reviews, and technical decisions",
+    type: "channel",
+    is_private: false,
+    created_by: "user-2",
+    created_at: new Date(Date.now() - 86400000 * 55).toISOString(),
+    updated_at: new Date(Date.now() - 3600000).toISOString(),
+    unread_count: 7,
+  },
+  {
+    id: "ch-design",
+    name: "design",
+    description: "Design system, UI/UX discussions, and design reviews",
+    type: "channel",
+    is_private: false,
+    created_by: "user-3",
+    created_at: new Date(Date.now() - 86400000 * 50).toISOString(),
+    updated_at: new Date(Date.now() - 7200000).toISOString(),
+    unread_count: 0,
+  },
+  {
+    id: "ch-random",
+    name: "random",
+    description: "Non-work banter and water cooler conversation",
+    type: "channel",
+    is_private: false,
+    created_by: "user-2",
+    created_at: new Date(Date.now() - 86400000 * 45).toISOString(),
+    updated_at: new Date(Date.now() - 1800000).toISOString(),
+    unread_count: 12,
+  },
+  {
+    id: "ch-devops",
+    name: "devops",
+    description: "Infrastructure, CI/CD, and deployment discussions",
+    type: "channel",
+    is_private: true,
+    created_by: "user-5",
+    created_at: new Date(Date.now() - 86400000 * 40).toISOString(),
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+    unread_count: 1,
+  },
+  {
+    id: "dm-alice",
+    name: "Alice Chen",
+    type: "dm",
+    is_private: true,
+    created_by: "user-1",
+    created_at: new Date(Date.now() - 86400000 * 25).toISOString(),
+    updated_at: new Date(Date.now() - 600000).toISOString(),
+    unread_count: 2,
+  },
+  {
+    id: "dm-bob",
+    name: "Bob Martinez",
+    type: "dm",
+    is_private: true,
+    created_by: "user-3",
+    created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    unread_count: 0,
+  },
+  {
+    id: "group-project",
+    name: "Project Alpha",
+    description: "Cross-functional team for Project Alpha",
+    type: "group",
+    is_private: true,
+    created_by: "user-4",
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    updated_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+    unread_count: 5,
+  },
+];
+
+function createMessage(
+  id: string,
+  channelId: string,
+  userId: string,
+  content: string,
+  minutesAgo: number,
+  type: Message["type"] = "text"
+): Message {
+  const user = mockUsers.find((u) => u.id === userId);
+  return {
+    id,
+    channel_id: channelId,
+    user_id: userId,
+    content,
+    type,
+    created_at: new Date(Date.now() - minutesAgo * 60000).toISOString(),
+    user,
+    reactions: [],
+    thread_count: 0,
+  };
+}
+
+export const mockMessages: Record<string, Message[]> = {
+  "ch-general": [
+    createMessage("msg-1", "ch-general", "user-2", "Good morning team! Quick reminder that we have the all-hands at 2pm today.", 120),
+    createMessage("msg-2", "ch-general", "user-4", "Thanks Alice! I'll be presenting the Q2 roadmap update.", 115),
+    createMessage("msg-3", "ch-general", "user-3", "Looking forward to it. I have some design updates to share as well.", 110),
+    createMessage("msg-4", "ch-general", "user-6", "Can someone share the Zoom link? I can't find the calendar invite.", 90),
+    createMessage("msg-5", "ch-general", "user-2", "Sure! Here it is: https://zoom.us/j/123456789", 88),
+    createMessage("msg-6", "ch-general", "user-5", "Heads up — the staging server will be down for maintenance from 3-4pm today.", 60),
+    createMessage("msg-7", "ch-general", "user-1", "Got it, thanks for the heads up Dave!", 55),
+    createMessage("msg-8", "ch-general", "user-2", "Great all-hands everyone! Notes will be shared in the #general channel by EOD.", 15),
+    createMessage("msg-9", "ch-general", "user-4", "Excellent presentations all around. Really excited about the new product direction.", 10),
+    createMessage("msg-10", "ch-general", "user-6", "Agreed! The analytics dashboard mockups looked incredible.", 5),
+  ],
+  "ch-engineering": [
+    createMessage("msg-e1", "ch-engineering", "user-2", "Has anyone looked into the new React 19 features? The compiler looks promising.", 480),
+    createMessage("msg-e2", "ch-engineering", "user-1", "Yeah, I've been experimenting with it. The automatic memoization is a game changer.", 470),
+    createMessage("msg-e3", "ch-engineering", "user-5", "PR #342 is ready for review. It refactors the authentication middleware.", 300),
+    createMessage("msg-e4", "ch-engineering", "user-2", "I'll take a look after lunch. Can you add some test cases for the edge cases?", 290),
+    createMessage("msg-e5", "ch-engineering", "user-5", "Already done! Check the `__tests__` directory.", 285),
+    createMessage("msg-e6", "ch-engineering", "user-6", "Quick question — are we using Zustand or Redux for the new dashboard state?", 120),
+    createMessage("msg-e7", "ch-engineering", "user-2", "We decided on Zustand. It's lighter and the API is cleaner for our use case.", 115),
+    createMessage("msg-e8", "ch-engineering", "user-1", "Zustand + React Query is a solid combo. I can share my setup if anyone needs it.", 110),
+    createMessage("msg-e9", "ch-engineering", "user-6", "That would be great! Can you post it in a thread?", 105),
+  ],
+  "ch-design": [
+    createMessage("msg-d1", "ch-design", "user-3", "New design system tokens are ready for review. Check the Figma link in the thread.", 1440),
+    createMessage("msg-d2", "ch-design", "user-4", "Love the new color palette! The dark mode looks especially sharp.", 1400),
+    createMessage("msg-d3", "ch-design", "user-3", "Thanks Carol! I spent extra time on the contrast ratios to ensure accessibility.", 1380),
+    createMessage("msg-d4", "ch-design", "user-1", "The button variants look clean. Are we keeping the ghost variant?", 720),
+    createMessage("msg-d5", "ch-design", "user-3", "Yes, ghost buttons are staying. They work well for secondary actions in dense UIs.", 700),
+  ],
+  "ch-random": [
+    createMessage("msg-r1", "ch-random", "user-6", "Anyone up for lunch at the new ramen place downtown?", 180),
+    createMessage("msg-r2", "ch-random", "user-3", "Count me in! I heard their tonkotsu is amazing.", 175),
+    createMessage("msg-r3", "ch-random", "user-5", "I'm in too. 12:30 work for everyone?", 170),
+    createMessage("msg-r4", "ch-random", "user-6", "Perfect! Meet at the lobby.", 168),
+    createMessage("msg-r5", "ch-random", "user-2", "Just saw this incredible talk on system design. Sharing the link: https://youtube.com/watch?v=example", 60),
+    createMessage("msg-r6", "ch-random", "user-4", "Oh nice, I love that speaker! Their talk on distributed systems was mind-blowing.", 55),
+    createMessage("msg-r7", "ch-random", "user-1", "Weekend plans anyone? Thinking of checking out the new hiking trail.", 30),
+    createMessage("msg-r8", "ch-random", "user-3", "That sounds fun! Which trail?", 25),
+    createMessage("msg-r9", "ch-random", "user-1", "The one near Crystal Lake. About 8 miles round trip.", 22),
+    createMessage("msg-r10", "ch-random", "user-6", "I'm in! Let's plan it for Saturday morning.", 18),
+    createMessage("msg-r11", "ch-random", "user-5", "Just discovered an amazing VS Code extension for pair programming. Game changer!", 8),
+    createMessage("msg-r12", "ch-random", "user-2", "Which one? I've been looking for a good one!", 5),
+  ],
+  "ch-devops": [
+    createMessage("msg-do1", "ch-devops", "user-5", "Kubernetes cluster upgrade to 1.29 completed successfully.", 2880),
+    createMessage("msg-do2", "ch-devops", "user-2", "Great work Dave! Any issues during the migration?", 2860),
+    createMessage("msg-do3", "ch-devops", "user-5", "Minor hiccup with the ingress controller, but resolved within 10 minutes. Zero downtime.", 2850),
+  ],
+  "dm-alice": [
+    createMessage("msg-da1", "dm-alice", "user-2", "Hey! Did you get a chance to look at the API spec I sent?", 240),
+    createMessage("msg-da2", "dm-alice", "user-1", "Yes! It looks solid. I have a few suggestions for the error handling section.", 230),
+    createMessage("msg-da3", "dm-alice", "user-2", "Perfect, let's discuss in our 1:1 tomorrow?", 225),
+    createMessage("msg-da4", "dm-alice", "user-1", "Sounds good! I'll prepare some notes.", 220),
+    createMessage("msg-da5", "dm-alice", "user-2", "Also, quick question — are you available for a code review this afternoon?", 30),
+    createMessage("msg-da6", "dm-alice", "user-1", "Sure! Send me the PR link and I'll take a look.", 25),
+  ],
+  "dm-bob": [
+    createMessage("msg-db1", "dm-bob", "user-3", "Hey, the new mockups are in Figma. Let me know what you think!", 4320),
+    createMessage("msg-db2", "dm-bob", "user-1", "These look amazing! The onboarding flow is really intuitive.", 4300),
+    createMessage("msg-db3", "dm-bob", "user-3", "Thanks! I iterated on it based on the user research findings.", 4290),
+  ],
+  "group-project": [
+    createMessage("msg-g1", "group-project", "user-4", "Team, here's the updated timeline for Project Alpha.", 720),
+    createMessage("msg-g2", "group-project", "user-2", "Looks good. Engineering can commit to the sprint 3 deadline.", 700),
+    createMessage("msg-g3", "group-project", "user-3", "Design deliverables will be ready by end of sprint 2.", 690),
+    createMessage("msg-g4", "group-project", "user-5", "Infrastructure is already set up. We're good to go on the DevOps side.", 680),
+    createMessage("msg-g5", "group-project", "user-4", "Excellent! Let's sync again on Friday. Great progress everyone!", 240),
+  ],
+};
