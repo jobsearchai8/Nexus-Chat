@@ -9,18 +9,20 @@ import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
   user?: User | null;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   showStatus?: boolean;
   className?: string;
 }
 
 const sizeMap = {
+  xs: "w-6 h-6 text-[10px]",
   sm: "w-7 h-7 text-xs",
   md: "w-9 h-9 text-sm",
   lg: "w-12 h-12 text-base",
 };
 
 const statusDotSize = {
+  xs: "w-1.5 h-1.5 -bottom-0 -right-0",
   sm: "w-2 h-2 -bottom-0 -right-0",
   md: "w-2.5 h-2.5 -bottom-0.5 -right-0.5",
   lg: "w-3 h-3 -bottom-0.5 -right-0.5",
@@ -76,14 +78,14 @@ export default function UserAvatar({
           src={user.avatar_url}
           alt={displayName}
           className={cn(
-            "rounded-md object-cover",
+            "rounded-full object-cover",
             sizeMap[size]
           )}
         />
       ) : (
         <div
           className={cn(
-            "rounded-md flex items-center justify-center font-semibold text-white",
+            "rounded-full flex items-center justify-center font-semibold text-white",
             sizeMap[size],
             getAvatarColor(displayName)
           )}
