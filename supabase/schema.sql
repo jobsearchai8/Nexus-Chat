@@ -30,13 +30,29 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    NEW.raw_user_meta_data->>'avatar_url'
-  );
+    COALESCE(
+      NEW.raw_user_meta_data->>'preferred_username',
+      NEW.raw_user_meta_data->>'user_name',
+      split_part(NEW.email, '@', 1)
+    ),
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      NEW.raw_user_meta_data->>'display_name',
+      split_part(NEW.email, '@', 1)
+    ),
+    COALESCE(
+      NEW.raw_user_meta_data->>'avatar_url',
+      NEW.raw_user_meta_data->>'picture',
+      ''
+    )
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    avatar_url = EXCLUDED.avatar_url;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
