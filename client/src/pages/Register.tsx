@@ -1,29 +1,54 @@
 /*
  * Register Page — Nexus Chat
  * ──────────────────────────
- * Midnight Command: Dark registration with sharp geometry
+ * Neo-Corporate Social: Light theme registration
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, MessageSquare, UserPlus } from "lucide-react";
+import { Loader2, Zap, UserPlus, Shield, Globe, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
-const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2fgaxJv4JtYGP66iKhZqNw/hero-bg-BF6yurV8zch3Uu2PUvWA7t.webp";
+const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2fgaxJv4JtYGP66iKhZqNw/nexus-hero-banner-PiGowhhyYB6CXWmjnt9xJB.webp";
 
 export default function Register() {
   const [, navigate] = useLocation();
-  const { signUp, signInWithGoogle, isDemo } = useAuth();
+  const { signUp, signInWithGoogle, isDemo, user, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate("/home");
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F0F2F5]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-[#1877F2]" />
+          <p className="text-[#65676B] text-sm">Signing you in...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F0F2F5]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1877F2]" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +64,7 @@ export default function Register() {
     try {
       await signUp(email, password, username);
       toast.success("Account created! Redirecting...");
-      navigate("/chat");
+      navigate("/home");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -51,7 +76,7 @@ export default function Register() {
     setIsLoading(true);
     try {
       await signInWithGoogle();
-      if (isDemo) navigate("/chat");
+      if (isDemo) navigate("/home");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign up with Google");
     } finally {
@@ -60,48 +85,51 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-[#F0F2F5]">
       {/* Left panel — Hero */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden">
-        <img
-          src={HERO_BG}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
+        <img src={HERO_BG} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A]/85 via-[#1B2A4A]/60 to-transparent" />
         <div className="relative z-10 flex flex-col justify-between p-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo/20 border border-indigo/30 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-indigo" />
+            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
-            <span className="text-xl font-semibold text-white tracking-tight">
+            <span className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Nexus Chat
             </span>
           </div>
 
           <div className="max-w-md">
-            <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+            <h1 className="text-4xl font-extrabold text-white leading-tight mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Join the
               <br />
-              <span className="text-cyan-accent">conversation</span>
+              <span className="text-[#4ECDC4]">conversation</span>
             </h1>
-            <p className="text-[#8B949E] text-lg leading-relaxed">
-              Create your account and start collaborating with your team in seconds. No credit card required.
+            <p className="text-white/70 text-lg leading-relaxed">
+              Create your account and start connecting with friends, sharing moments, and chatting in real-time.
             </p>
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-[#8B949E]">
-            <span>Free to start</span>
-            <span className="w-1 h-1 rounded-full bg-[#30363D]" />
-            <span>Unlimited messages</span>
-            <span className="w-1 h-1 rounded-full bg-[#30363D]" />
-            <span>Voice & video calls</span>
+          <div className="flex items-center gap-6 text-sm text-white/60">
+            <span className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#4ECDC4]" />
+              Free to start
+            </span>
+            <span className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#FF6B6B]" />
+              Unlimited messages
+            </span>
+            <span className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-white/80" />
+              Voice & video calls
+            </span>
           </div>
         </div>
       </div>
 
       {/* Right panel — Register form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-surface-0">
+      <div className="flex-1 flex items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -109,24 +137,24 @@ export default function Register() {
           className="w-full max-w-sm"
         >
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-indigo/20 border border-indigo/30 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-indigo" />
+            <div className="w-11 h-11 rounded-xl bg-[#1B2A4A] flex items-center justify-center">
+              <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">
+            <span className="text-xl font-bold text-[#1C1E21] tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Nexus Chat
             </span>
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight mb-1">
+          <h2 className="text-2xl font-bold text-[#1C1E21] tracking-tight mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             Create your account
           </h2>
-          <p className="text-muted-foreground text-sm mb-8">
+          <p className="text-[#65676B] text-sm mb-8">
             Get started with Nexus Chat
           </p>
 
           <Button
             variant="outline"
-            className="w-full h-11 mb-4 bg-surface-1 border-border hover:bg-surface-2 transition-colors"
+            className="w-full h-11 mb-4 bg-white border-gray-200 hover:bg-gray-50 text-[#1C1E21] transition-colors shadow-sm"
             onClick={handleGoogleSignUp}
             disabled={isLoading}
           >
@@ -141,10 +169,10 @@ export default function Register() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+              <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-surface-0 px-3 text-muted-foreground">
+              <span className="bg-[#F0F2F5] px-3 text-[#65676B]">
                 or register with email
               </span>
             </div>
@@ -152,56 +180,56 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium text-[#1C1E21]">Username</Label>
               <Input
                 id="username"
                 type="text"
                 placeholder="your_username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="h-11 bg-surface-1 border-border focus:border-indigo glow-focus"
+                className="h-11 bg-white border-gray-200 text-[#1C1E21] placeholder:text-[#65676B] focus:border-[#1877F2] focus:ring-[#1877F2]/20"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-[#1C1E21]">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 bg-surface-1 border-border focus:border-indigo glow-focus"
+                className="h-11 bg-white border-gray-200 text-[#1C1E21] placeholder:text-[#65676B] focus:border-[#1877F2] focus:ring-[#1877F2]/20"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-[#1C1E21]">Password</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="Min. 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 bg-surface-1 border-border focus:border-indigo glow-focus"
+                className="h-11 bg-white border-gray-200 text-[#1C1E21] placeholder:text-[#65676B] focus:border-[#1877F2] focus:ring-[#1877F2]/20"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-[#1C1E21]">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 placeholder="Repeat your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-11 bg-surface-1 border-border focus:border-indigo glow-focus"
+                className="h-11 bg-white border-gray-200 text-[#1C1E21] placeholder:text-[#65676B] focus:border-[#1877F2] focus:ring-[#1877F2]/20"
                 required
               />
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-indigo hover:bg-indigo/90 text-white font-medium"
+              className="w-full h-11 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -213,11 +241,11 @@ export default function Register() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="text-center text-sm text-[#65676B] mt-6">
             Already have an account?{" "}
             <button
               onClick={() => navigate("/login")}
-              className="text-indigo hover:text-indigo/80 font-medium transition-colors"
+              className="text-[#1877F2] hover:text-[#166FE5] font-semibold transition-colors"
             >
               Sign in
             </button>

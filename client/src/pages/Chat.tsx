@@ -49,7 +49,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-surface-0">
+    <div className="dark h-screen flex overflow-hidden bg-[#0D1117] text-[#E6EDF3]">
       {/* Sidebar */}
       <Sidebar onSearchOpen={() => setSearchOpen(true)} />
 
