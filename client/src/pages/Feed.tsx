@@ -1,5 +1,5 @@
 /*
- * Feed Page — Nexus Chat Social Network
+ * Feed Page — Nexus Networks Social Network
  * ──────────────────────────────────────
  * Facebook-style news feed with three-column layout
  * Left sidebar: navigation, Right sidebar: contacts/suggestions
@@ -106,7 +106,7 @@ export default function Feed() {
           {/* Footer */}
           <div className="px-3 mt-6 text-xs text-[#65676B] space-y-1">
             <p>Privacy · Terms · Advertising · Cookies</p>
-            <p>Nexus Chat © 2026</p>
+            <p>Nexus Networks © 2026</p>
           </div>
         </aside>
 

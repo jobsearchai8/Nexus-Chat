@@ -1,5 +1,5 @@
 /*
- * Chat Page — Nexus Chat
+ * Chat Page — Nexus Networks
  * ──────────────────────
  * Midnight Command: Main messaging interface
  * Three-panel layout: Sidebar | Messages | Members
@@ -137,7 +137,7 @@ export default function Chat() {
                 alt="Select a conversation"
                 className="w-48 h-48 mx-auto mb-6 opacity-60"
               />
-              <h2 className="text-xl font-bold mb-2">Welcome to Nexus Chat</h2>
+              <h2 className="text-xl font-bold mb-2">Welcome to Nexus Networks</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
                 Select a channel or direct message from the sidebar to start
                 chatting. Use{" "}

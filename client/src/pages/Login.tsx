@@ -1,5 +1,5 @@
 /*
- * Login Page — Nexus Chat
+ * Login Page — Nexus Networks
  * ───────────────────────
  * Neo-Corporate Social: Light theme login with hero banner
  * Deep indigo + teal accents, Plus Jakarta Sans typography
@@ -110,7 +110,7 @@ export default function Login() {
               <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Nexus Chat
+              Nexus Networks
             </span>
           </motion.div>
 
@@ -166,7 +166,7 @@ export default function Login() {
               <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
             <span className="text-xl font-bold text-[#1C1E21] tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Nexus Chat
+              Nexus Networks
             </span>
           </div>
 

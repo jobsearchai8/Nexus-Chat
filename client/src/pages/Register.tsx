@@ -1,5 +1,5 @@
 /*
- * Register Page — Nexus Chat
+ * Register Page — Nexus Networks
  * ──────────────────────────
  * Neo-Corporate Social: Light theme registration
  */
@@ -96,7 +96,7 @@ export default function Register() {
               <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Nexus Chat
+              Nexus Networks
             </span>
           </div>
 
@@ -141,7 +141,7 @@ export default function Register() {
               <Zap className="w-5 h-5 text-[#4ECDC4]" />
             </div>
             <span className="text-xl font-bold text-[#1C1E21] tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Nexus Chat
+              Nexus Networks
             </span>
           </div>
 
@@ -149,7 +149,7 @@ export default function Register() {
             Create your account
           </h2>
           <p className="text-[#65676B] text-sm mb-8">
-            Get started with Nexus Chat
+            Get started with Nexus Networks
           </p>
 
           <Button

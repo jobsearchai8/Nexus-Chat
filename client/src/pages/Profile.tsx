@@ -1,5 +1,5 @@
 /*
- * Profile Page — Nexus Chat Social Network
+ * Profile Page — Nexus Networks Social Network
  * ─────────────────────────────────────────
  * Facebook-style user profile with cover photo, bio, and posts
  */
