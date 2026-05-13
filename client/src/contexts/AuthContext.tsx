@@ -197,66 +197,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Use Google Identity Services (GIS) popup-based flow
-    // This avoids redirecting to supabase.co and keeps the user on our domain
-    return new Promise<void>((resolve, reject) => {
-      const google = (window as any).google;
-      if (!google?.accounts?.id) {
-        reject(new Error("Google Identity Services not loaded. Please refresh and try again."));
-        return;
-      }
-
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async (response: any) => {
-          try {
-            if (!response.credential) {
-              reject(new Error("No credential received from Google"));
-              return;
-            }
-
-            // Use Supabase signInWithIdToken instead of signInWithOAuth
-            const { error } = await supabase!.auth.signInWithIdToken({
-              provider: "google",
-              token: response.credential,
-            });
-
-            if (error) {
-              reject(error);
-              return;
-            }
-
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      // Trigger the One Tap / popup prompt
-      google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          // If One Tap is not displayed (e.g., user dismissed it before),
-          // fall back to the button-style popup
-          google.accounts.oauth2.initCodeClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: "openid email profile",
-            ux_mode: "popup",
-            callback: async (response: any) => {
-              // This path shouldn't normally be needed, but as a fallback
-              // we can exchange the code. For now, reject with a helpful message.
-              reject(new Error("Please allow popups and try again."));
-            },
-          });
-        }
-        if (notification.isSkippedMoment()) {
-          // User closed the prompt — don't treat as error
-          reject(new Error("Sign-in was cancelled."));
-        }
-      });
+    // Use Supabase OAuth redirect flow — this is the most reliable approach.
+    // Google's consent screen will show "Nexus Networks" as the app name.
+    const { error } = await supabase!.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/home`,
+      },
     });
+
+    if (error) throw error;
   }, [isDemo]);
 
   const signOut = useCallback(async () => {
