@@ -1,8 +1,8 @@
 /*
- * Auth Context -- Nexus Chat
- * -------------------------
+ * Auth Context — Nexus Networks
+ * ─────────────────────────
  * Handles authentication state with Supabase or demo mode
- * Fixed: OAuth callback race condition -- waits for URL hash processing
+ * Fixed: OAuth callback race condition — waits for URL hash processing
  * Fixed: Demo mode session persistence via sessionStorage
  */
 
@@ -110,12 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mountedRef.current) {
             setIsLoading(false);
           }
-        } else if (event === "INITIAL_SESSION" && !session) {
-          // No existing session -- user is not logged in
-          if (mountedRef.current) {
-            setUser(null);
-            setIsLoading(false);
-          }
         } else if (event === "SIGNED_OUT") {
           if (mountedRef.current) {
             setUser(null);
@@ -137,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.search.includes("code=");
 
     if (hasAuthCallback) {
-      // Let onAuthStateChange handle it -- don't set isLoading to false prematurely
+      // Let onAuthStateChange handle it — don't set isLoading to false prematurely
       // Set a timeout as a safety net in case the callback doesn't fire
       const timeout = setTimeout(() => {
         if (mountedRef.current && isLoading) {
@@ -152,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    // No OAuth callback -- check for existing session normally
+    // No OAuth callback — check for existing session normally
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase!.auth.getSession();
@@ -173,17 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSession();
 
-    // Safety net timeout -- if loading is still true after 5 seconds, force it to false
-    const safetyTimeout = setTimeout(() => {
-      if (mountedRef.current) {
-        setIsLoading(false);
-      }
-    }, 5000);
-
     return () => {
       mountedRef.current = false;
       subscription.unsubscribe();
-      clearTimeout(safetyTimeout);
     };
   }, [isDemo]);
 

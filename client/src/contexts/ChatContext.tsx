@@ -1,5 +1,5 @@
 /*
- * Chat Context — Nexus Chat
+ * Chat Context — Nexus Networks
  * ─────────────────────────
  * Manages channels, messages, and real-time state
  */

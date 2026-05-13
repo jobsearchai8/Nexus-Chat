@@ -1,5 +1,5 @@
 /*
- * Social Context — Nexus Chat
+ * Social Context — Nexus Networks
  * ────────────────────────────
  * Manages social feed state: posts, stories, notifications, friends
  */
