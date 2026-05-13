@@ -1,5 +1,5 @@
 /*
- * MessageBubble — Nexus Chat
+ * MessageBubble — Nexus Networks
  * ──────────────────────────
  * Midnight Command: Compact message display with monospace timestamps
  */

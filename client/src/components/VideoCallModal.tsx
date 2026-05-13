@@ -1,5 +1,5 @@
 /*
- * VideoCallModal — Nexus Chat
+ * VideoCallModal — Nexus Networks
  * ───────────────────────────
  * Midnight Command: Voice/Video call interface with WebRTC
  */

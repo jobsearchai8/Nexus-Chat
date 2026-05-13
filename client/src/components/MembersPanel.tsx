@@ -1,5 +1,5 @@
 /*
- * MembersPanel — Nexus Chat
+ * MembersPanel — Nexus Networks
  * ─────────────────────────
  * Midnight Command: Side panel showing channel members with status
  */

@@ -1,5 +1,5 @@
 /*
- * Sidebar — Nexus Chat
+ * Sidebar — Nexus Networks
  * ────────────────────
  * Midnight Command: Dense sidebar with channels, DMs, groups
  * Dark anchor panel, sharp geometry, monospace metadata
@@ -110,7 +110,7 @@ export default function Sidebar({ onSearchOpen }: SidebarProps) {
               <div className="w-6 h-6 rounded bg-indigo/20 flex items-center justify-center">
                 <MessageSquare className="w-3.5 h-3.5 text-indigo" />
               </div>
-              <span className="font-semibold text-sm truncate">Nexus Chat</span>
+              <span className="font-semibold text-sm truncate">Nexus Networks</span>
               <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>

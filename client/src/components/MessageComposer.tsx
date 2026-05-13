@@ -1,5 +1,5 @@
 /*
- * MessageComposer — Nexus Chat
+ * MessageComposer — Nexus Networks
  * ────────────────────────────
  * Midnight Command: Message input with file upload, emoji, and formatting
  */

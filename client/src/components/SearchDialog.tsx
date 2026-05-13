@@ -1,5 +1,5 @@
 /*
- * SearchDialog — Nexus Chat
+ * SearchDialog — Nexus Networks
  * ─────────────────────────
  * Midnight Command: Spotlight-style command palette (CMD+K)
  */

@@ -1,5 +1,5 @@
 /*
- * UserAvatar — Nexus Chat
+ * UserAvatar — Nexus Networks
  * ───────────────────────
  * Displays user avatar with online status indicator
  */

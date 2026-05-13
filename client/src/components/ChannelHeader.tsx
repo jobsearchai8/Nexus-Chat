@@ -1,5 +1,5 @@
 /*
- * ChannelHeader — Nexus Chat
+ * ChannelHeader — Nexus Networks
  * ──────────────────────────
  * Midnight Command: Channel info bar with call actions
  */
