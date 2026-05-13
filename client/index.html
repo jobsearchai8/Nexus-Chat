@@ -11,24 +11,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <!-- Google Identity Services for popup-based sign-in -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-      /* Hide the automatic Google One Tap overlay that appears on page load.
-         We only want the prompt to show when the user clicks "Continue with Google". */
-      #credential_picker_container,
-      .g_id_signin,
-      [id^="g_id_"],
-      iframe[src*="accounts.google.com/gsi"] {
-        display: none !important;
-        visibility: hidden !important;
-        position: absolute !important;
-        left: -9999px !important;
-        width: 0 !important;
-        height: 0 !important;
-        overflow: hidden !important;
-      }
-    </style>
   </head>
 
   <body>
