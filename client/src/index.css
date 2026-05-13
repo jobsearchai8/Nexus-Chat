@@ -1,13 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Hide the Google One Tap auto-prompt that appears at the bottom of the page */
-#credential_picker_container,
-#g_id_onload,
-.g_id_signin,
-[id^="gsi_"] {
-  display: none !important;
-}
 
 @custom-variant dark (&:is(.dark *));
 
