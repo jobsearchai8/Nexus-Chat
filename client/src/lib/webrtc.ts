@@ -1,5 +1,5 @@
 /*
- * WebRTC Utility — Nexus Chat
+ * WebRTC Utility — Nexus Networks
  * ───────────────────────────
  * Peer-to-peer voice/video calling via WebRTC
  * Uses Supabase Realtime for signaling when configured

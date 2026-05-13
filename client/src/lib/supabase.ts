@@ -1,7 +1,7 @@
 /*
  * Supabase Client Configuration
  * ─────────────────────────────
- * Midnight Command theme — Nexus Chat
+ * Midnight Command theme — Nexus Networks
  *
  * Users must set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
  * in their .env file for Supabase to work.

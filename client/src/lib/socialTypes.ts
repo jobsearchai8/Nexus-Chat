@@ -1,5 +1,5 @@
 /*
- * Nexus Chat — Social Network Type Definitions
+ * Nexus Networks — Social Network Type Definitions
  * ──────────────────────────────────────────────
  * Types for the Facebook-style social feed mode
  */

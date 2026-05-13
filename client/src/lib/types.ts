@@ -1,5 +1,5 @@
 /*
- * Nexus Chat — Type Definitions
+ * Nexus Networks — Type Definitions
  * ─────────────────────────────
  * Midnight Command theme
  */
