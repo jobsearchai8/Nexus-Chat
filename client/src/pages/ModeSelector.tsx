@@ -1,5 +1,5 @@
 /*
- * Mode Selector — Nexus Chat
+ * Mode Selector — Nexus Networks
  * ───────────────────────────
  * Post-login landing page where users choose between Chat and Social modes
  * Design: Neo-Corporate Social — Deep indigo, coral accents, Plus Jakarta Sans
@@ -40,7 +40,7 @@ export default function ModeSelector() {
               <Zap className="w-6 h-6 text-[#4ECDC4]" />
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Nexus Chat
+              Nexus Networks
             </h1>
           </div>
           <p className="text-white/80 text-lg max-w-md mx-auto">
