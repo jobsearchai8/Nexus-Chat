@@ -214,4 +214,29 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Safe area for bottom tab bar on iOS */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Prevent text selection on interactive elements for mobile */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Smooth momentum scrolling on iOS */
+  .momentum-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile-optimized touch targets */
+  @media (max-width: 767px) {
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 0;
+      display: none;
+    }
+  }
 }

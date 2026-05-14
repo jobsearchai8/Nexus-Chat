@@ -1,8 +1,8 @@
 /*
  * Sidebar — Nexus Networks
- * ────────────────────
- * Midnight Command: Dense sidebar with channels, DMs, groups
- * Dark anchor panel, sharp geometry, monospace metadata
+ * ────────────────────────
+ * Facebook Messenger-style conversation list
+ * Clean, simple, with circular avatars and message previews
  */
 
 import { useState } from "react";
@@ -16,15 +16,12 @@ import {
   Lock,
   MessageSquare,
   Plus,
-  ChevronDown,
-  ChevronRight,
   Users,
-  Phone,
-  Video,
   Search,
   Settings,
   LogOut,
-  Circle,
+  Pencil,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,22 +46,29 @@ import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   onSearchOpen: () => void;
+  onSelectChannel?: () => void;
+  isMobile?: boolean;
 }
 
-export default function Sidebar({ onSearchOpen }: SidebarProps) {
+export default function Sidebar({ onSearchOpen, onSelectChannel, isMobile }: SidebarProps) {
   const { user, signOut } = useAuth();
   const { channels, currentChannel, setCurrentChannel, createChannel, users } = useChat();
-  const [channelsExpanded, setChannelsExpanded] = useState(true);
-  const [dmsExpanded, setDmsExpanded] = useState(true);
-  const [groupsExpanded, setGroupsExpanded] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [newChannelOpen, setNewChannelOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelDesc, setNewChannelDesc] = useState("");
   const [newChannelPrivate, setNewChannelPrivate] = useState(false);
 
-  const channelList = channels.filter((c) => c.type === "channel");
-  const dmList = channels.filter((c) => c.type === "dm");
-  const groupList = channels.filter((c) => c.type === "group");
+  // Filter conversations based on search
+  const getFilteredChannels = () => {
+    let filtered = channels;
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((c) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return filtered;
+  };
 
   const handleCreateChannel = async () => {
     if (!newChannelName.trim()) return;
@@ -81,6 +85,7 @@ export default function Sidebar({ onSearchOpen }: SidebarProps) {
       setNewChannelDesc("");
       setNewChannelPrivate(false);
       toast.success(`#${channel.name} created`);
+      onSelectChannel?.();
     } catch (error: any) {
       toast.error(error.message || "Failed to create channel");
     }
@@ -91,304 +96,210 @@ export default function Sidebar({ onSearchOpen }: SidebarProps) {
     window.location.href = "/login";
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "online": return "text-neon-green";
-      case "away": return "text-yellow-500";
-      case "dnd": return "text-red-500";
-      default: return "text-[#484F58]";
-    }
+  const handleSelectChannel = (channel: Channel) => {
+    setCurrentChannel(channel);
+    onSelectChannel?.();
   };
 
+  const getLastMessagePreview = (channel: Channel) => {
+    if (channel.last_message) {
+      const content = channel.last_message.content;
+      return content.length > 35 ? content.slice(0, 35) + "..." : content;
+    }
+    return channel.description
+      ? channel.description.slice(0, 35) + (channel.description.length > 35 ? "..." : "")
+      : "Tap to start chatting";
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(dateStr).toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
+  const getChannelIcon = (channel: Channel) => {
+    if (channel.type === "dm") {
+      const otherUser = users.find((u) => u.id !== user?.id && channel.name.includes(u.display_name));
+      return <UserAvatar user={otherUser || user} size="md" showStatus />;
+    }
+    if (channel.type === "group") {
+      return (
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+          <Users className="w-5 h-5 text-white" />
+        </div>
+      );
+    }
+    // Channel
+    return (
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+        {channel.is_private ? (
+          <Lock className="w-5 h-5 text-white" />
+        ) : (
+          <Hash className="w-5 h-5 text-white" />
+        )}
+      </div>
+    );
+  };
+
+  const filteredChannels = getFilteredChannels();
+
   return (
-    <div className="w-64 h-full flex flex-col bg-surface-0 border-r border-border">
-      {/* Workspace header */}
-      <div className="h-[52px] px-4 flex items-center justify-between border-b border-border shrink-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 hover:bg-surface-2 rounded-md px-2 py-1.5 transition-colors">
-              <div className="w-6 h-6 rounded bg-indigo/20 flex items-center justify-center">
-                <MessageSquare className="w-3.5 h-3.5 text-indigo" />
-              </div>
-              <span className="font-semibold text-sm truncate">Nexus Networks</span>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 bg-surface-1 border-border">
-            <DropdownMenuItem className="text-muted-foreground text-xs cursor-default">
-              Workspace
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem onClick={onSearchOpen}>
-              <Search className="w-4 h-4 mr-2" />
-              Search messages
-              <span className="ml-auto text-xs text-muted-foreground font-mono">⌘K</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Quick actions */}
-      <div className="px-2 py-2 space-y-0.5 border-b border-border shrink-0">
-        <button
-          onClick={onSearchOpen}
-          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors"
-        >
-          <Search className="w-4 h-4" />
-          <span>Search</span>
-          <span className="ml-auto text-xs font-mono text-muted-foreground/60">⌘K</span>
-        </button>
-      </div>
-
-      {/* Channel list */}
-      <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="px-2 py-2">
-          {/* Channels section */}
-          <div className="mb-2">
-            <button
-              onClick={() => setChannelsExpanded(!channelsExpanded)}
-              className="w-full flex items-center gap-1 px-1.5 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-            >
-              {channelsExpanded ? (
-                <ChevronDown className="w-3 h-3" />
-              ) : (
-                <ChevronRight className="w-3 h-3" />
-              )}
-              Channels
-              <Dialog open={newChannelOpen} onOpenChange={setNewChannelOpen}>
-                <DialogTrigger asChild>
-                  <span
-                    className="ml-auto p-0.5 rounded hover:bg-surface-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </span>
-                </DialogTrigger>
-                <DialogContent className="bg-surface-1 border-border">
-                  <DialogHeader>
-                    <DialogTitle>Create a channel</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-2">
-                    <div className="space-y-2">
-                      <Label>Channel name</Label>
-                      <Input
-                        placeholder="e.g. marketing"
-                        value={newChannelName}
-                        onChange={(e) => setNewChannelName(e.target.value)}
-                        className="bg-surface-0 border-border"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Description (optional)</Label>
-                      <Input
-                        placeholder="What's this channel about?"
-                        value={newChannelDesc}
-                        onChange={(e) => setNewChannelDesc(e.target.value)}
-                        className="bg-surface-0 border-border"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label>Private channel</Label>
-                      <Switch
-                        checked={newChannelPrivate}
-                        onCheckedChange={setNewChannelPrivate}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleCreateChannel}
-                      className="w-full bg-indigo hover:bg-indigo/90 text-white"
-                      disabled={!newChannelName.trim()}
-                    >
-                      Create Channel
-                    </Button>
+    <div className={cn(
+      "h-full flex flex-col bg-white dark:bg-[#0D1117]",
+      !isMobile && "border-r border-gray-100 dark:border-[#21262D]"
+    )}>
+      {/* Header — Messenger style */}
+      <div className="px-4 pt-4 pb-2 shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-[26px] font-bold text-gray-900 dark:text-[#E6EDF3]">Chats</h1>
+          <div className="flex items-center gap-2">
+            <Dialog open={newChannelOpen} onOpenChange={setNewChannelOpen}>
+              <DialogTrigger asChild>
+                <button className="w-9 h-9 rounded-full bg-gray-100 dark:bg-[#21262D] flex items-center justify-center text-gray-600 dark:text-[#8B949E] hover:bg-gray-200 dark:hover:bg-[#30363D] transition-colors">
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="bg-white dark:bg-[#161B22] border-gray-200 dark:border-[#30363D]">
+                <DialogHeader>
+                  <DialogTitle className="text-gray-900 dark:text-[#E6EDF3]">New conversation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <Label className="text-gray-600 dark:text-[#8B949E]">Name</Label>
+                    <Input
+                      placeholder="e.g. marketing"
+                      value={newChannelName}
+                      onChange={(e) => setNewChannelName(e.target.value)}
+                      className="bg-gray-50 dark:bg-[#0D1117] border-gray-200 dark:border-[#30363D] text-gray-900 dark:text-[#E6EDF3]"
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </button>
-            {channelsExpanded && (
-              <div className="space-y-0.5 mt-0.5">
-                {channelList.map((channel) => (
-                  <ChannelItem
-                    key={channel.id}
-                    channel={channel}
-                    isActive={currentChannel?.id === channel.id}
-                    onClick={() => setCurrentChannel(channel)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Direct Messages section */}
-          <div className="mb-2">
-            <button
-              onClick={() => setDmsExpanded(!dmsExpanded)}
-              className="w-full flex items-center gap-1 px-1.5 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-            >
-              {dmsExpanded ? (
-                <ChevronDown className="w-3 h-3" />
-              ) : (
-                <ChevronRight className="w-3 h-3" />
-              )}
-              Direct Messages
-            </button>
-            {dmsExpanded && (
-              <div className="space-y-0.5 mt-0.5">
-                {dmList.map((dm) => {
-                  const otherUser = users.find(
-                    (u) => u.display_name === dm.name || u.username === dm.name
-                  );
-                  return (
-                    <button
-                      key={dm.id}
-                      onClick={() => setCurrentChannel(dm)}
-                      className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors",
-                        currentChannel?.id === dm.id
-                          ? "bg-indigo/15 text-foreground"
-                          : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-                      )}
-                    >
-                      <div className="relative">
-                        <UserAvatar user={otherUser} size="sm" />
-                        <Circle
-                          className={cn(
-                            "w-2 h-2 absolute -bottom-0 -right-0 fill-current",
-                            getStatusColor(otherUser?.status || "offline")
-                          )}
-                        />
-                      </div>
-                      <span className="truncate">{dm.name}</span>
-                      {dm.unread_count ? (
-                        <span className="ml-auto bg-indigo text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                          {dm.unread_count}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Groups section */}
-          {groupList.length > 0 && (
-            <div className="mb-2">
-              <button
-                onClick={() => setGroupsExpanded(!groupsExpanded)}
-                className="w-full flex items-center gap-1 px-1.5 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-              >
-                {groupsExpanded ? (
-                  <ChevronDown className="w-3 h-3" />
-                ) : (
-                  <ChevronRight className="w-3 h-3" />
-                )}
-                Groups
-              </button>
-              {groupsExpanded && (
-                <div className="space-y-0.5 mt-0.5">
-                  {groupList.map((group) => (
-                    <button
-                      key={group.id}
-                      onClick={() => setCurrentChannel(group)}
-                      className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors",
-                        currentChannel?.id === group.id
-                          ? "bg-indigo/15 text-foreground"
-                          : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-                      )}
-                    >
-                      <Users className="w-4 h-4 shrink-0" />
-                      <span className="truncate">{group.name}</span>
-                      {group.unread_count ? (
-                        <span className="ml-auto bg-indigo text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                          {group.unread_count}
-                        </span>
-                      ) : null}
-                    </button>
-                  ))}
+                  <div className="space-y-2">
+                    <Label className="text-gray-600 dark:text-[#8B949E]">Description (optional)</Label>
+                    <Input
+                      placeholder="What's this about?"
+                      value={newChannelDesc}
+                      onChange={(e) => setNewChannelDesc(e.target.value)}
+                      className="bg-gray-50 dark:bg-[#0D1117] border-gray-200 dark:border-[#30363D] text-gray-900 dark:text-[#E6EDF3]"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-gray-600 dark:text-[#8B949E]">Private</Label>
+                    <Switch
+                      checked={newChannelPrivate}
+                      onCheckedChange={setNewChannelPrivate}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleCreateChannel}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    disabled={!newChannelName.trim()}
+                  >
+                    Create
+                  </Button>
                 </div>
-              )}
-            </div>
-          )}
+              </DialogContent>
+            </Dialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-9 h-9 rounded-full bg-gray-100 dark:bg-[#21262D] flex items-center justify-center text-gray-600 dark:text-[#8B949E] hover:bg-gray-200 dark:hover:bg-[#30363D] transition-colors">
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white dark:bg-[#161B22] border-gray-200 dark:border-[#30363D]">
+                <DropdownMenuItem onClick={onSearchOpen} className="text-gray-700 dark:text-[#E6EDF3]">
+                  <Search className="w-4 h-4 mr-2" />
+                  Search messages
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-gray-700 dark:text-[#E6EDF3]">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-gray-100 dark:bg-[#30363D]" />
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Search bar — Messenger style rounded pill */}
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#484F58]" />
+          <input
+            type="text"
+            placeholder="Search Messenger"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-10 pl-10 pr-4 bg-gray-100 dark:bg-[#161B22] rounded-full text-[15px] text-gray-900 dark:text-[#E6EDF3] placeholder:text-gray-400 dark:placeholder:text-[#484F58] outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Conversation list */}
+      <ScrollArea className="flex-1">
+        <div className="px-2 py-1">
+          {filteredChannels.map((channel) => {
+            const isActive = currentChannel?.id === channel.id;
+            const hasUnread = (channel.unread_count || 0) > 0;
+
+            return (
+              <button
+                key={channel.id}
+                onClick={() => handleSelectChannel(channel)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left",
+                  isActive
+                    ? "bg-blue-50 dark:bg-blue-500/10"
+                    : "hover:bg-gray-50 dark:hover:bg-[#161B22]"
+                )}
+              >
+                {/* Avatar */}
+                <div className="shrink-0">
+                  {getChannelIcon(channel)}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn(
+                      "text-[15px] truncate",
+                      hasUnread
+                        ? "font-semibold text-gray-900 dark:text-[#E6EDF3]"
+                        : "font-medium text-gray-800 dark:text-[#C9D1D9]"
+                    )}>
+                      {channel.type === "channel" ? `#${channel.name}` : channel.name}
+                    </span>
+                    <span className="text-[12px] text-gray-400 dark:text-[#484F58] shrink-0">
+                      {getTimeAgo(channel.updated_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className={cn(
+                      "text-[13px] truncate flex-1",
+                      hasUnread
+                        ? "text-gray-700 dark:text-[#C9D1D9] font-medium"
+                        : "text-gray-500 dark:text-[#8B949E]"
+                    )}>
+                      {getLastMessagePreview(channel)}
+                    </p>
+                    {hasUnread && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </ScrollArea>
-
-      {/* User panel */}
-      <div className="h-[52px] px-3 flex items-center gap-2 border-t border-border shrink-0">
-        <UserAvatar user={user} size="sm" showStatus />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{user?.display_name}</p>
-          <p className="text-[10px] font-mono text-muted-foreground truncate">
-            {user?.status_text || user?.status || "online"}
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="p-1.5 rounded-md hover:bg-surface-2 text-muted-foreground transition-colors">
-              <Settings className="w-4 h-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="bg-surface-1 border-border">
-            <DropdownMenuItem>
-              <Circle className="w-3 h-3 mr-2 fill-neon-green text-neon-green" />
-              Set as Online
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Circle className="w-3 h-3 mr-2 fill-yellow-500 text-yellow-500" />
-              Set as Away
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Circle className="w-3 h-3 mr-2 fill-red-500 text-red-500" />
-              Do Not Disturb
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </div>
-  );
-}
-
-function ChannelItem({
-  channel,
-  isActive,
-  onClick,
-}: {
-  channel: Channel;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors",
-        isActive
-          ? "bg-indigo/15 text-foreground"
-          : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-      )}
-    >
-      {channel.is_private ? (
-        <Lock className="w-4 h-4 shrink-0" />
-      ) : (
-        <Hash className="w-4 h-4 shrink-0" />
-      )}
-      <span className="truncate">{channel.name}</span>
-      {channel.unread_count ? (
-        <span className="ml-auto bg-indigo text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-          {channel.unread_count}
-        </span>
-      ) : null}
-    </button>
   );
 }

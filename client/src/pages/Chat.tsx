@@ -1,12 +1,19 @@
 /*
  * Chat Page — Nexus Networks
- * ──────────────────────
- * Midnight Command: Main messaging interface
- * Three-panel layout: Sidebar | Messages | Members
+ * ──────────────────────────
+ * Facebook Messenger-style layout
+ *
+ * MOBILE (<768px):
+ *   Full-screen conversation list → tap → full-screen chat
+ *   Back arrow returns to conversation list
+ *
+ * DESKTOP (≥768px):
+ *   Two-panel: Conversation list (360px) | Chat area (flex)
  */
 
 import { useState, useRef, useEffect } from "react";
 import { useChat } from "@/contexts/ChatContext";
+import { useIsMobile } from "@/hooks/useMobile";
 import Sidebar from "@/components/Sidebar";
 import ChannelHeader from "@/components/ChannelHeader";
 import MessageBubble from "@/components/MessageBubble";
@@ -15,17 +22,19 @@ import MembersPanel from "@/components/MembersPanel";
 import SearchDialog from "@/components/SearchDialog";
 import VideoCallModal from "@/components/VideoCallModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare } from "lucide-react";
-import { motion } from "framer-motion";
-
-const EMPTY_STATE_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2fgaxJv4JtYGP66iKhZqNw/empty-state-dNzCeebGh52hLzHEE4AaP9.webp";
+import { MessageCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 export default function Chat() {
-  const { currentChannel, messages, isLoadingMessages } = useChat();
+  const { currentChannel, setCurrentChannel, messages, isLoadingMessages } = useChat();
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [showMembers, setShowMembers] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [callType, setCallType] = useState<"voice" | "video">("voice");
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -33,9 +42,24 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // When a channel is selected on mobile, show the chat view
+  useEffect(() => {
+    if (isMobile && currentChannel) {
+      setMobileShowChat(true);
+    }
+  }, [currentChannel, isMobile]);
+
   const handleStartCall = (type: "voice" | "video") => {
     setCallType(type);
     setCallOpen(true);
+  };
+
+  const handleMobileBack = () => {
+    setMobileShowChat(false);
+  };
+
+  const handleMobileSelectChannel = () => {
+    setMobileShowChat(true);
   };
 
   // Check if messages should be grouped (same user, within 5 minutes)
@@ -48,107 +72,141 @@ export default function Chat() {
     return timeDiff < 5 * 60 * 1000;
   };
 
-  return (
-    <div className="dark h-screen flex overflow-hidden bg-[#0D1117] text-[#E6EDF3]">
-      {/* Sidebar */}
-      <Sidebar onSearchOpen={() => setSearchOpen(true)} />
+  // Empty state when no channel selected (desktop only)
+  const renderEmptyState = () => (
+    <div className="flex-1 flex flex-col items-center justify-center text-center px-6 bg-white dark:bg-[#0D1117]">
+      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-5 mx-auto shadow-lg">
+        <MessageCircle className="w-10 h-10 text-white" />
+      </div>
+      <h2 className="text-[22px] font-semibold text-gray-900 dark:text-[#E6EDF3] mb-2">Your Messages</h2>
+      <p className="text-[15px] text-gray-500 dark:text-[#8B949E] max-w-sm">
+        Select a conversation to start chatting
+      </p>
+    </div>
+  );
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {currentChannel ? (
-          <>
-            <ChannelHeader
-              onStartCall={handleStartCall}
-              onToggleMembers={() => setShowMembers(!showMembers)}
-              onSearchOpen={() => setSearchOpen(true)}
-            />
+  // Chat messages area
+  const renderChatArea = () => {
+    if (!currentChannel) return renderEmptyState();
 
-            <div className="flex-1 flex overflow-hidden">
-              {/* Messages area */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <ScrollArea className="flex-1 custom-scrollbar">
-                  <div className="py-4">
-                    {/* Channel welcome */}
-                    <div className="px-5 pb-6 mb-2 border-b border-border">
-                      <div className="w-12 h-12 rounded-lg bg-indigo/15 flex items-center justify-center mb-3">
-                        <MessageSquare className="w-6 h-6 text-indigo" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-1">
-                        {currentChannel.type === "dm"
-                          ? currentChannel.name
-                          : `#${currentChannel.name}`}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {currentChannel.description ||
-                          (currentChannel.type === "dm"
-                            ? `This is the beginning of your conversation with ${currentChannel.name}`
-                            : `This is the start of the #${currentChannel.name} channel`)}
-                      </p>
+    return (
+      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0D1117]">
+        <ChannelHeader
+          onStartCall={handleStartCall}
+          onToggleMembers={() => setShowMembers(!showMembers)}
+          onSearchOpen={() => setSearchOpen(true)}
+          onBack={isMobile ? handleMobileBack : undefined}
+          isMobile={isMobile}
+        />
+
+        <div className="flex-1 flex overflow-hidden">
+          {/* Messages area */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <ScrollArea className="flex-1">
+              <div className={cn("px-3 md:px-4 py-4", isMobile && "pb-2")}>
+                {/* Messages */}
+                {isLoadingMessages ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.15s]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.3s]" />
                     </div>
-
-                    {/* Messages */}
-                    {isLoadingMessages ? (
-                      <div className="flex items-center justify-center py-12">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <div className="w-2 h-2 rounded-full bg-indigo animate-bounce" />
-                          <div className="w-2 h-2 rounded-full bg-indigo animate-bounce [animation-delay:0.1s]" />
-                          <div className="w-2 h-2 rounded-full bg-indigo animate-bounce [animation-delay:0.2s]" />
-                        </div>
-                      </div>
-                    ) : messages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-                        <p className="text-sm text-muted-foreground">
-                          No messages yet. Start the conversation!
-                        </p>
-                      </div>
-                    ) : (
-                      messages.map((message, index) => (
-                        <MessageBubble
-                          key={message.id}
-                          message={message}
-                          isGrouped={shouldGroup(message, messages[index - 1])}
-                        />
-                      ))
-                    )}
-                    <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
-
-                <MessageComposer />
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-[#161B22] flex items-center justify-center mb-4">
+                      <MessageCircle className="w-8 h-8 text-gray-400 dark:text-[#8B949E]" />
+                    </div>
+                    <p className="text-[15px] text-gray-500 dark:text-[#8B949E] font-medium">
+                      No messages yet
+                    </p>
+                    <p className="text-[13px] text-gray-400 dark:text-[#484F58] mt-1">
+                      Say hello to start the conversation!
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((message, index) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      isGrouped={shouldGroup(message, messages[index - 1])}
+                    />
+                  ))
+                )}
+                <div ref={messagesEndRef} />
               </div>
+            </ScrollArea>
 
-              {/* Members panel */}
-              <MembersPanel
-                isOpen={showMembers}
-                onClose={() => setShowMembers(false)}
-              />
-            </div>
-          </>
+            <MessageComposer />
+          </div>
+
+          {/* Members panel — desktop only inline */}
+          {!isMobile && (
+            <MembersPanel
+              isOpen={showMembers}
+              onClose={() => setShowMembers(false)}
+              isMobile={false}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── MOBILE LAYOUT ───
+  if (isMobile) {
+    return (
+      <div className="h-[100dvh] flex flex-col overflow-hidden bg-white dark:bg-[#0D1117]">
+        {/* Conversation list OR Chat view — full screen each */}
+        {mobileShowChat && currentChannel ? (
+          <div className="flex-1 flex flex-col">
+            {renderChatArea()}
+          </div>
         ) : (
-          /* Empty state — no channel selected */
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <img
-                src={EMPTY_STATE_IMG}
-                alt="Select a conversation"
-                className="w-48 h-48 mx-auto mb-6 opacity-60"
-              />
-              <h2 className="text-xl font-bold mb-2">Welcome to Nexus Networks</h2>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Select a channel or direct message from the sidebar to start
-                chatting. Use{" "}
-                <kbd className="text-[10px] font-mono bg-surface-2 px-1.5 py-0.5 rounded border border-border">
-                  ⌘K
-                </kbd>{" "}
-                to search.
-              </p>
-            </motion.div>
+          <div className="flex-1 flex flex-col">
+            <Sidebar
+              onSearchOpen={() => setSearchOpen(true)}
+              onSelectChannel={handleMobileSelectChannel}
+              isMobile={true}
+            />
           </div>
         )}
+
+        {/* Mobile members sheet */}
+        <MembersPanel
+          isOpen={showMembers}
+          onClose={() => setShowMembers(false)}
+          isMobile={true}
+        />
+
+        {/* Search dialog */}
+        <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+        {/* Video call modal */}
+        <VideoCallModal
+          isOpen={callOpen}
+          callType={callType}
+          onClose={() => setCallOpen(false)}
+        />
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───
+  return (
+    <div className="h-screen flex overflow-hidden bg-white dark:bg-[#0D1117]">
+      {/* Conversation list — Messenger style */}
+      <div className="w-[360px] shrink-0 border-r border-gray-200 dark:border-[#21262D]">
+        <Sidebar
+          onSearchOpen={() => setSearchOpen(true)}
+          isMobile={false}
+        />
+      </div>
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {renderChatArea()}
       </div>
 
       {/* Search dialog */}
