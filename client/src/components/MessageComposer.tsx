@@ -3,19 +3,20 @@
  * ────────────────────────────────
  * Facebook Messenger-style message input
  * Rounded pill input, plus/attach on left, send/like on right
+ * Functional emoji picker via @emoji-mart
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useChat } from "@/contexts/ChatContext";
+import Picker from "@emoji-mart/react";
+import data from "@emoji-mart/data";
 import {
   Plus,
   Send,
   Smile,
-  Image,
   ThumbsUp,
   X,
   FileIcon,
-  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -27,18 +28,40 @@ export default function MessageComposer() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
+        setShowEmoji(false);
+      }
+    };
+    if (showEmoji) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmoji]);
+
+  const handleEmojiSelect = (emoji: any) => {
+    const sym = emoji.native;
+    if (!sym) return;
+    setContent((prev) => prev + sym);
+    // Focus textarea after inserting emoji
+    textareaRef.current?.focus();
+  };
 
   const handleSend = useCallback(async () => {
     if (!currentChannel || isSending) return;
     if (!content.trim() && !attachedFile) return;
 
     setIsSending(true);
+    setShowEmoji(false);
     try {
       if (attachedFile) {
-        // Upload file
         if (isSupabaseConfigured) {
           const fileExt = attachedFile.name.split(".").pop();
           const fileName = `${Date.now()}.${fileExt}`;
@@ -60,7 +83,6 @@ export default function MessageComposer() {
             type: attachedFile.type,
           });
         } else {
-          // Demo mode
           const type = attachedFile.type.startsWith("image/") ? "image" : "file";
           await sendMessage(content || attachedFile.name, type as any, {
             url: attachedPreview || "#",
@@ -93,11 +115,9 @@ export default function MessageComposer() {
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    // Auto-grow
     const textarea = e.target;
     textarea.style.height = "auto";
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
-    // Typing indicator
     if (currentChannel) {
       setTyping(currentChannel.id);
     }
@@ -116,7 +136,6 @@ export default function MessageComposer() {
       reader.onload = () => setAttachedPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
-    setShowAttachMenu(false);
   };
 
   const clearAttachment = () => {
@@ -130,7 +149,25 @@ export default function MessageComposer() {
   const hasContent = content.trim().length > 0 || attachedFile;
 
   return (
-    <div className="shrink-0 border-t border-gray-100 dark:border-[#21262D] bg-white dark:bg-[#0D1117] px-3 py-2">
+    <div className="shrink-0 border-t border-gray-100 dark:border-[#21262D] bg-white dark:bg-[#0D1117] px-3 py-2 relative">
+      {/* Emoji Picker Popover */}
+      {showEmoji && (
+        <div
+          ref={emojiRef}
+          className="absolute bottom-full right-4 mb-2 z-50 shadow-xl rounded-xl overflow-hidden"
+        >
+          <Picker
+            data={data}
+            onEmojiSelect={handleEmojiSelect}
+            theme="light"
+            previewPosition="none"
+            skinTonePosition="search"
+            maxFrequentRows={2}
+            perLine={8}
+          />
+        </div>
+      )}
+
       {/* Attached file preview */}
       {attachedFile && (
         <div className="mb-2 flex items-center gap-2 bg-gray-50 dark:bg-[#161B22] rounded-xl px-3 py-2">
@@ -172,11 +209,19 @@ export default function MessageComposer() {
             onKeyDown={handleKeyDown}
             placeholder="Aa"
             rows={1}
-            className="w-full resize-none bg-gray-100 dark:bg-[#303030] rounded-[20px] px-4 py-2.5 text-[15px] text-gray-900 dark:text-[#E6EDF3] placeholder:text-gray-400 dark:placeholder:text-[#6E7681] outline-none focus:ring-2 focus:ring-blue-500/20 transition-all max-h-[120px] leading-[1.35]"
+            className="w-full resize-none bg-gray-100 dark:bg-[#303030] rounded-[20px] px-4 pr-10 py-2.5 text-[15px] text-gray-900 dark:text-[#E6EDF3] placeholder:text-gray-400 dark:placeholder:text-[#6E7681] outline-none focus:ring-2 focus:ring-blue-500/20 transition-all max-h-[120px] leading-[1.35]"
             style={{ height: "auto", minHeight: "40px" }}
           />
-          {/* Emoji button inside input */}
-          <button className="absolute right-3 bottom-2.5 text-blue-500 hover:text-blue-600 transition-colors">
+          {/* Emoji toggle button inside input */}
+          <button
+            onClick={() => setShowEmoji((prev) => !prev)}
+            className={cn(
+              "absolute right-3 bottom-2.5 transition-colors",
+              showEmoji
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-blue-500 hover:text-blue-600"
+            )}
+          >
             <Smile className="w-5 h-5" />
           </button>
         </div>
