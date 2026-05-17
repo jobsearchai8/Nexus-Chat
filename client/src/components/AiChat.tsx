@@ -1,7 +1,7 @@
 /*
  * AI Chat — Nexus Networks
  * ────────────────────────
- * AI chatbot powered by Google Gemini (free tier)
+ * AI chatbot powered by Forge API (OpenAI-compatible)
  * Messenger-style conversation with AI assistant
  */
 
@@ -26,9 +26,9 @@ interface AiConversation {
   createdAt: string;
 }
 
-// Gemini API configuration (free tier)
-const GEMINI_API_KEY = "AIzaSyBMVEBOhfOuVvnhxNf3LCz3B0MYMEF8mFo";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Forge API configuration (OpenAI-compatible)
+const FORGE_API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY || "";
+const FORGE_API_URL = import.meta.env.VITE_FRONTEND_FORGE_API_URL || "";
 
 export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
   const { user } = useAuth();
@@ -73,41 +73,47 @@ export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
     }
   };
 
-  const sendToGemini = useCallback(async (messages: AiMessage[]) => {
-    const contents = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+  const sendToAI = useCallback(async (messages: AiMessage[]) => {
+    if (!FORGE_API_KEY || !FORGE_API_URL) {
+      return "AI Chat is not configured. Please set up the API key in environment variables.";
+    }
+
+    const chatMessages = [
+      {
+        role: "system" as const,
+        content: "You are Nexus AI, a helpful and friendly assistant in the Nexus Networks chat platform. Be concise, helpful, and conversational. You can help with coding, writing, research, brainstorming, and general questions.",
+      },
+      ...messages.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+    ];
 
     try {
-      const response = await fetch(GEMINI_API_URL, {
+      const response = await fetch(`${FORGE_API_URL}/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${FORGE_API_KEY}`,
+        },
         body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          ],
+          model: "google/gemini-2.0-flash",
+          messages: chatMessages,
+          temperature: 0.7,
+          max_tokens: 2048,
         }),
       });
 
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error("AI API error:", response.status, errorData);
         throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response. Please try again.";
+      return data.choices?.[0]?.message?.content || "I couldn't generate a response. Please try again.";
     } catch (error: any) {
-      console.error("Gemini API error:", error);
+      console.error("AI API error:", error);
       return "Sorry, I'm having trouble connecting right now. Please try again in a moment.";
     }
   }, []);
@@ -152,8 +158,8 @@ export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
       textareaRef.current.style.height = "auto";
     }
 
-    // Call Gemini API
-    const aiResponse = await sendToGemini(updatedMessages);
+    // Call AI API
+    const aiResponse = await sendToAI(updatedMessages);
 
     const assistantMessage: AiMessage = {
       id: `msg-${Date.now() + 1}`,
@@ -204,7 +210,7 @@ export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
           </button>
         </div>
         <p className="text-[13px] text-gray-500 dark:text-[#8B949E] mb-3">
-          Chat with AI powered by Google Gemini
+          Chat with Nexus AI Assistant
         </p>
       </div>
 
@@ -289,7 +295,7 @@ export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[15px] font-semibold text-gray-900 dark:text-[#E6EDF3] truncate">
-              Gemini AI
+              Nexus AI
             </p>
             <p className="text-[12px] text-green-500">Online</p>
           </div>
@@ -378,7 +384,7 @@ export default function AiChat({ fullScreen }: { fullScreen?: boolean } = {}) {
                 value={input}
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Gemini anything..."
+                placeholder="Ask Nexus AI anything..."
                 rows={1}
                 className="w-full resize-none bg-gray-100 dark:bg-[#161B22] rounded-[20px] px-4 py-2.5 text-[15px] text-gray-900 dark:text-[#E6EDF3] placeholder:text-gray-400 dark:placeholder:text-[#6E7681] outline-none focus:ring-2 focus:ring-blue-500/20 transition-all max-h-[120px] leading-[1.35]"
                 style={{ height: "auto", minHeight: "40px" }}
