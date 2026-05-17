@@ -2,7 +2,8 @@
  * Auth Context — Nexus Networks
  * ─────────────────────────
  * Handles authentication state with Supabase or demo mode.
- * Uses Supabase OAuth redirect flow for Google login (most reliable).
+ * Uses server-side OAuth flow for Google login.
+ * Google prompt shows "to continue to nexus-networks.vercel.app" (not supabase.co).
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
@@ -25,6 +26,51 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Check if there's a supabase_session cookie from the server-side OAuth callback.
+ * If found, set it in the Supabase client and clear the cookie.
+ */
+async function restoreSessionFromCookie(): Promise<boolean> {
+  try {
+    // Check for supabase_session cookie
+    const cookies = document.cookie.split(";").reduce((acc, cookie) => {
+      const [name, ...rest] = cookie.trim().split("=");
+      if (name) acc[name] = rest.join("=");
+      return acc;
+    }, {} as Record<string, string>);
+
+    const encodedSession = cookies["supabase_session"];
+    if (!encodedSession || !supabase) return false;
+
+    // Decode the session
+    const sessionData = JSON.parse(atob(encodedSession));
+
+    if (sessionData.access_token && sessionData.refresh_token) {
+      // Set the session in Supabase client
+      const { error } = await supabase.auth.setSession({
+        access_token: sessionData.access_token,
+        refresh_token: sessionData.refresh_token,
+      });
+
+      // Clear the cookie regardless
+      document.cookie = "supabase_session=; Path=/; Max-Age=0; Secure; SameSite=Lax";
+
+      if (error) {
+        console.error("[Auth] Failed to restore session from cookie:", error);
+        return false;
+      }
+
+      console.log("[Auth] Session restored from server-side OAuth callback");
+      return true;
+    }
+  } catch (e) {
+    console.error("[Auth] Error restoring session from cookie:", e);
+    // Clear the cookie on error
+    document.cookie = "supabase_session=; Path=/; Max-Age=0; Secure; SameSite=Lax";
+  }
+  return false;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -91,8 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return buildUserFromSession(sessionUser);
     };
 
-    // Check for existing session first
-    supabase!.auth.getSession().then(async ({ data: { session } }) => {
+    // Initialize: check for server-side OAuth session cookie, then check existing session
+    const initAuth = async () => {
+      // First, try to restore session from server-side OAuth callback cookie
+      await restoreSessionFromCookie();
+
+      // Then check for existing session
+      const { data: { session } } = await supabase!.auth.getSession();
       if (!mountedRef.current) return;
 
       if (session?.user) {
@@ -104,7 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mountedRef.current) {
         setIsLoading(false);
       }
-    });
+    };
+
+    initAuth();
 
     // Set up the auth state change listener
     const { data: { subscription } } = supabase!.auth.onAuthStateChange(
@@ -161,30 +214,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, [isDemo]);
 
-  // Google sign-in using Supabase OAuth redirect flow
-  // This is the most reliable method — redirects through Supabase to Google and back
+  // Google sign-in — redirect to our server-side OAuth handler
+  // This shows "to continue to nexus-networks.vercel.app" in Google prompt
   const signInWithGoogle = useCallback(async () => {
     if (isDemo) {
       setUser(mockCurrentUser);
       return;
     }
 
-    const { error } = await supabase!.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin + "/home",
-      },
-    });
-
-    if (error) {
-      console.error("[Auth] signInWithOAuth error:", error);
-      throw error;
-    }
+    // Redirect to our server-side Google OAuth handler
+    window.location.href = "/api/auth/google/login";
   }, [isDemo]);
 
-  // Render Google Sign-In button — now just a styled button that triggers OAuth redirect
+  // Render Google Sign-In button — no-op, we use our own styled button
   const renderGoogleButton = useCallback((_element: HTMLElement) => {
-    // No-op: we use our own styled button that calls signInWithGoogle
+    // No-op
   }, []);
 
   const signOut = useCallback(async () => {
