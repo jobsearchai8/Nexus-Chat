@@ -2,9 +2,7 @@
  * Auth Context — Nexus Networks
  * ─────────────────────────
  * Handles authentication state with Supabase or demo mode.
- * Uses Google Identity Services (GIS) popup for Google login.
- * This shows "nexus-networks.vercel.app" in Google prompt (not supabase.co),
- * only one Google prompt, and is fast/efficient.
+ * Uses Supabase OAuth redirect flow for Google login (most reliable).
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
@@ -13,7 +11,6 @@ import { mockCurrentUser } from "@/lib/mockData";
 import type { User } from "@/lib/types";
 
 const DEMO_SESSION_KEY = "nexus_demo_user";
-const GOOGLE_CLIENT_ID = "255852212484-k5userbqmr03lb5kn2r4vlosgt54bsn4.apps.googleusercontent.com";
 
 interface AuthContextType {
   user: User | null;
@@ -29,36 +26,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Load Google Identity Services script
-function loadGoogleScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.getElementById("google-gis-script")) {
-      resolve();
-      return;
-    }
-    // Check if already loaded
-    if ((window as any).google?.accounts?.id) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = "google-gis-script";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Identity Services"));
-    document.head.appendChild(script);
-  });
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const isDemo = !isSupabaseConfigured;
   const mountedRef = useRef(true);
-  const googleInitializedRef = useRef(false);
-  const credentialCallbackRef = useRef<((response: any) => void) | null>(null);
 
   // Persist demo user to sessionStorage whenever it changes
   useEffect(() => {
@@ -139,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (!mountedRef.current) return;
 
-        if (event === "SIGNED_IN" && session?.user) {
+        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
           const userProfile = await fetchUserProfile(session.user);
           if (mountedRef.current && userProfile) {
             setUser(userProfile);
@@ -158,29 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [isDemo]);
-
-  // Initialize Google Identity Services
-  useEffect(() => {
-    if (isDemo || googleInitializedRef.current) return;
-
-    loadGoogleScript().then(() => {
-      const goog = (window as any).google;
-      if (!goog?.accounts?.id) return;
-
-      goog.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response: any) => {
-          if (credentialCallbackRef.current) {
-            credentialCallbackRef.current(response);
-          }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      googleInitializedRef.current = true;
-    }).catch(console.error);
   }, [isDemo]);
 
   const signIn = useCallback(async (email: string, _password: string) => {
@@ -212,100 +161,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, [isDemo]);
 
-  // Google sign-in using GIS popup + signInWithIdToken
-  // This shows "nexus-networks.vercel.app" in Google prompt, not supabase.co
-  // Only one Google prompt, fast and efficient
+  // Google sign-in using Supabase OAuth redirect flow
+  // This is the most reliable method — redirects through Supabase to Google and back
   const signInWithGoogle = useCallback(async () => {
     if (isDemo) {
       setUser(mockCurrentUser);
       return;
     }
 
-    // Ensure Google script is loaded
-    await loadGoogleScript();
+    const { error } = await supabase!.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/home",
+      },
+    });
 
-    const goog = (window as any).google;
-    if (!goog?.accounts?.id) {
-      throw new Error("Google Identity Services not available");
+    if (error) {
+      console.error("[Auth] signInWithOAuth error:", error);
+      throw error;
     }
-
-    // Re-initialize to ensure callback is fresh
-    return new Promise<void>((resolve, reject) => {
-      credentialCallbackRef.current = async (response: any) => {
-        if (!response.credential) {
-          reject(new Error("No credential received from Google"));
-          return;
-        }
-
-        try {
-          const { error } = await supabase!.auth.signInWithIdToken({
-            provider: "google",
-            token: response.credential,
-          });
-
-          if (error) {
-            console.error("[Auth] signInWithIdToken error:", error);
-            reject(error);
-          } else {
-            resolve();
-          }
-        } catch (e) {
-          console.error("[Auth] Exception during signInWithIdToken:", e);
-          reject(e);
-        }
-      };
-
-      // Trigger Google One Tap / popup
-      goog.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          // If One Tap is blocked, fall back to OAuth popup
-          console.log("[Auth] One Tap not displayed, reason:", notification.getNotDisplayedReason());
-          const tokenClient = goog.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: "openid email profile",
-            callback: async (tokenResponse: any) => {
-              if (tokenResponse.error) {
-                reject(new Error(tokenResponse.error));
-                return;
-              }
-              // Fallback: use signInWithOAuth redirect
-              try {
-                const { error } = await supabase!.auth.signInWithOAuth({
-                  provider: "google",
-                  options: {
-                    redirectTo: window.location.origin + "/home",
-                    skipBrowserRedirect: false,
-                  },
-                });
-                if (error) reject(error);
-                else resolve();
-              } catch (e) {
-                reject(e);
-              }
-            },
-          });
-          tokenClient.requestAccessToken();
-        } else if (notification.isSkippedMoment()) {
-          console.log("[Auth] One Tap skipped, reason:", notification.getSkippedReason());
-        }
-      });
-    });
   }, [isDemo]);
 
-  // Render Google Sign-In button (One Tap style)
-  const renderGoogleButton = useCallback((element: HTMLElement) => {
-    const goog = (window as any).google;
-    if (isDemo || !goog?.accounts?.id) return;
-
-    goog.accounts.id.renderButton(element, {
-      type: "standard",
-      theme: "outline",
-      size: "large",
-      text: "continue_with",
-      shape: "rectangular",
-      width: element.offsetWidth || 320,
-    });
-  }, [isDemo]);
+  // Render Google Sign-In button — now just a styled button that triggers OAuth redirect
+  const renderGoogleButton = useCallback((_element: HTMLElement) => {
+    // No-op: we use our own styled button that calls signInWithGoogle
+  }, []);
 
   const signOut = useCallback(async () => {
     if (isDemo) {
@@ -315,7 +195,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Sign out from Supabase
       await supabase!.auth.signOut();
     } catch (e) {
       console.error("[Auth] Sign out error:", e);
@@ -323,12 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Always clear local state regardless of Supabase response
     setUser(null);
-
-    // Revoke Google session if available
-    const goog = (window as any).google;
-    if (goog?.accounts?.id) {
-      goog.accounts.id.disableAutoSelect();
-    }
   }, [isDemo]);
 
   const updateProfile = useCallback(async (data: Partial<User>) => {
@@ -373,5 +246,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Use (window as any).google to avoid conflicts with Map.tsx google types
