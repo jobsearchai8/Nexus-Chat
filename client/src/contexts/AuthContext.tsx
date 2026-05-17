@@ -2,11 +2,8 @@
  * Auth Context — Nexus Networks
  * ─────────────────────────
  * Handles authentication state with Supabase or demo mode.
- * Uses Google Identity Services (GIS) google.accounts.id.renderButton
- * to show Google's native sign-in button. When clicked, Google opens
- * its own popup, authenticates the user, and returns an id_token.
- * We pass that id_token to Supabase's signInWithIdToken — no redirect
- * to supabase.co at any point.
+ * Uses Supabase's signInWithOAuth for Google login (redirect-based).
+ * This is more reliable than GIS signInWithIdToken on deployed sites.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
@@ -15,19 +12,6 @@ import { mockCurrentUser } from "@/lib/mockData";
 import type { User } from "@/lib/types";
 
 const DEMO_SESSION_KEY = "nexus_demo_user";
-const GOOGLE_CLIENT_ID = "255852212484-k5userbqmr03lb5kn2r4vlosgt54bsn4.apps.googleusercontent.com";
-
-// Declare the google global from GIS script
-declare const google: {
-  accounts: {
-    id: {
-      initialize: (config: any) => void;
-      renderButton: (element: HTMLElement, config: any) => void;
-      prompt: (callback?: (notification: any) => void) => void;
-      cancel: () => void;
-    };
-  };
-};
 
 interface AuthContextType {
   user: User | null;
@@ -48,8 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const isDemo = !isSupabaseConfigured;
   const mountedRef = useRef(true);
-  const gisInitializedRef = useRef(false);
-  const pendingButtonRef = useRef<HTMLElement | null>(null);
 
   // Persist demo user to sessionStorage whenever it changes
   useEffect(() => {
@@ -61,68 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [user, isDemo]);
-
-  // Initialize Google Identity Services
-  useEffect(() => {
-    if (isDemo || gisInitializedRef.current) return;
-
-    const initGIS = () => {
-      if (typeof google === "undefined" || !google?.accounts?.id) return false;
-
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async (response: { credential: string; select_by: string }) => {
-          try {
-            // response.credential is the JWT id_token from Google
-            const { data, error } = await supabase!.auth.signInWithIdToken({
-              provider: "google",
-              token: response.credential,
-            });
-
-            if (error) {
-              console.error("Supabase signInWithIdToken error:", error);
-            }
-            // The onAuthStateChange listener will handle setting the user
-          } catch (err) {
-            console.error("Error during Google sign-in:", err);
-          }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        itp_support: true,
-      });
-
-      gisInitializedRef.current = true;
-
-      // If there's a pending button element, render the Google button now
-      if (pendingButtonRef.current) {
-        google.accounts.id.renderButton(pendingButtonRef.current, {
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          shape: "rectangular",
-          logo_alignment: "left",
-          width: pendingButtonRef.current.offsetWidth || 400,
-        });
-        pendingButtonRef.current = null;
-      }
-
-      return true;
-    };
-
-    // Try to initialize immediately
-    if (initGIS()) return;
-
-    // Otherwise wait for the script to load
-    const interval = setInterval(() => {
-      if (initGIS()) {
-        clearInterval(interval);
-      }
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [isDemo]);
 
   // Auth state listener
   useEffect(() => {
@@ -166,7 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return profile as User;
         }
       } catch (e) {
-        // Profile may not exist yet
+        // Profile may not exist yet — use session data
+        console.log("Profile not found, using session data");
       }
       return buildUserFromSession(sessionUser);
     };
@@ -176,14 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (!mountedRef.current) return;
 
+        console.log("[Auth] Event:", event, "Session:", !!session);
+
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          // Small delay to let Supabase settle
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           if (!mountedRef.current) return;
 
           const userProfile = await fetchUserProfile(session.user);
           if (mountedRef.current && userProfile) {
             setUser(userProfile);
+            console.log("[Auth] User set:", userProfile.display_name);
           }
           if (mountedRef.current) {
             setIsLoading(false);
@@ -208,12 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Safety timeout — if auth state hasn't resolved in 5 seconds, stop loading
+    // Safety timeout — if auth state hasn't resolved in 6 seconds, stop loading
     const safetyTimeout = setTimeout(() => {
       if (mountedRef.current && isLoading) {
+        console.log("[Auth] Safety timeout triggered — stopping loading");
         setIsLoading(false);
       }
-    }, 5000);
+    }, 6000);
 
     return () => {
       mountedRef.current = false;
@@ -251,37 +177,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, [isDemo]);
 
-  // signInWithGoogle is now a no-op for non-demo mode because
-  // Google's renderButton handles the entire flow. The callback
-  // in google.accounts.id.initialize handles the token exchange.
+  // Google sign-in using Supabase OAuth redirect flow
   const signInWithGoogle = useCallback(async () => {
     if (isDemo) {
       setUser(mockCurrentUser);
       return;
     }
-    // For non-demo: the Google rendered button handles everything.
-    // This function exists for API compatibility.
-  }, [isDemo]);
 
-  // Function to render Google's native sign-in button into a DOM element
-  const renderGoogleButton = useCallback((element: HTMLElement) => {
-    if (isDemo) return;
+    const { error } = await supabase!.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/home",
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
 
-    if (gisInitializedRef.current && typeof google !== "undefined") {
-      google.accounts.id.renderButton(element, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        text: "continue_with",
-        shape: "rectangular",
-        logo_alignment: "left",
-        width: element.offsetWidth || 400,
-      });
-    } else {
-      // GIS not ready yet — save the element reference so we can render later
-      pendingButtonRef.current = element;
+    if (error) {
+      console.error("[Auth] Google OAuth error:", error);
+      throw error;
     }
+    // The browser will redirect to Google, then back to our app
   }, [isDemo]);
+
+  // renderGoogleButton is kept for API compatibility but now just renders a styled button
+  const renderGoogleButton = useCallback((_element: HTMLElement) => {
+    // No-op — we now use the redirect-based flow via signInWithGoogle
+  }, []);
 
   const signOut = useCallback(async () => {
     if (isDemo) {
