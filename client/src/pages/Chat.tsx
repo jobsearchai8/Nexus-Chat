@@ -2,7 +2,7 @@
  * Chat Page — Nexus Networks
  * ───────────────────────────
  * Facebook Messenger-style layout:
- * - Bottom nav: Chats, AI Chats, Notifications, Menu
+ * - Bottom nav: Chats, People, AI Chats, Notifications, Menu
  * - Mobile: Full-screen transitions between tabs and conversations
  * - Desktop: Two-panel (left tabs + right active chat)
  */
@@ -20,12 +20,13 @@ import VideoCallModal from "@/components/VideoCallModal";
 import AiChat from "@/components/AiChat";
 import NotificationsTab from "@/components/NotificationsTab";
 import MenuTab from "@/components/MenuTab";
+import PeopleTab from "@/components/PeopleTab";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Bot, Bell, Menu } from "lucide-react";
+import { MessageCircle, Bot, Bell, Menu, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-type TabId = "chats" | "ai" | "notifications" | "menu";
+type TabId = "chats" | "people" | "ai" | "notifications" | "menu";
 
 export default function Chat() {
   const { currentChannel, setCurrentChannel, messages, isLoadingMessages } = useChat();
@@ -46,7 +47,7 @@ export default function Chat() {
 
   // When a channel is selected on mobile, show the chat view
   useEffect(() => {
-    if (isMobile && currentChannel && activeTab === "chats") {
+    if (isMobile && currentChannel && (activeTab === "chats" || activeTab === "people")) {
       setMobileShowChat(true);
     }
   }, [currentChannel, isMobile, activeTab]);
@@ -77,8 +78,9 @@ export default function Chat() {
   // Bottom navigation tabs
   const tabs: { id: TabId; icon: typeof MessageCircle; label: string }[] = [
     { id: "chats", icon: MessageCircle, label: "Chats" },
+    { id: "people", icon: Users, label: "People" },
     { id: "ai", icon: Bot, label: "AI Chats" },
-    { id: "notifications", icon: Bell, label: "Notifications" },
+    { id: "notifications", icon: Bell, label: "Alerts" },
     { id: "menu", icon: Menu, label: "Menu" },
   ];
 
@@ -93,6 +95,8 @@ export default function Chat() {
             isMobile={isMobile}
           />
         );
+      case "people":
+        return <PeopleTab onSelectChannel={handleMobileSelectChannel} />;
       case "ai":
         return <AiChat />;
       case "notifications":
@@ -104,7 +108,7 @@ export default function Chat() {
 
   // Bottom Navigation Bar component
   const BottomNav = () => (
-    <div className="shrink-0 border-t border-gray-100 dark:border-[#21262D] bg-white dark:bg-[#0D1117] px-2 pb-[env(safe-area-inset-bottom)]">
+    <div className="shrink-0 border-t border-gray-100 dark:border-[#21262D] bg-white dark:bg-[#0D1117] px-1 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around py-1.5">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -116,14 +120,14 @@ export default function Chat() {
                 if (isMobile) setMobileShowChat(false);
               }}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-lg transition-colors min-w-[60px]",
+                "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors min-w-[48px]",
                 isActive
                   ? "text-blue-500"
                   : "text-gray-500 dark:text-[#8B949E] hover:text-gray-700 dark:hover:text-[#C9D1D9]"
               )}
             >
               <tab.icon
-                className={cn("w-6 h-6 md:w-5 md:h-5", isActive && "fill-blue-500/10")}
+                className={cn("w-5.5 h-5.5 md:w-5 md:h-5", isActive && "fill-blue-500/10")}
                 strokeWidth={isActive ? 2.2 : 1.8}
               />
               <span className={cn(
@@ -225,7 +229,7 @@ export default function Chat() {
     return (
       <div className="h-[100dvh] flex flex-col overflow-hidden bg-white dark:bg-[#0D1117]">
         {/* Show chat view or tab content */}
-        {mobileShowChat && currentChannel && activeTab === "chats" ? (
+        {mobileShowChat && currentChannel && (activeTab === "chats" || activeTab === "people") ? (
           <div className="flex-1 flex flex-col">
             {renderChatArea()}
           </div>
@@ -277,7 +281,7 @@ export default function Chat() {
 
       {/* Right panel — Active chat or full-screen content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {activeTab === "chats" ? renderChatArea() : activeTab === "ai" ? (
+        {activeTab === "chats" || activeTab === "people" ? renderChatArea() : activeTab === "ai" ? (
           <AiChat fullScreen />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6 bg-gray-50 dark:bg-[#010409]">

@@ -25,6 +25,9 @@ import {
   ChevronDown,
   Compass,
   User,
+  Menu,
+  Moon,
+  Sun,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +36,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export function SocialNavbar() {
   const [location, navigate] = useLocation();
@@ -41,6 +50,7 @@ export function SocialNavbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
@@ -71,7 +81,7 @@ export function SocialNavbar() {
     { icon: Users, label: "Network", path: "/feed" },
     { icon: Compass, label: "Discover", path: "/feed" },
     { icon: Bell, label: "Alerts", path: "/feed", badge: unreadNotifCount },
-    { icon: User, label: "Profile", path: "/profile" },
+    { icon: Menu, label: "Menu", path: "__menu__" },
   ];
 
   const timeAgo = (dateStr: string) => {
@@ -299,11 +309,17 @@ export function SocialNavbar() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/80 safe-area-bottom">
         <div className="flex items-center justify-around h-14 px-1">
           {mobileBottomTabs.map(({ icon: Icon, label, path, badge }) => {
-            const isActive = (label === "Home" && location === "/feed") || (label === "Profile" && location === "/profile");
+            const isActive = (label === "Home" && location === "/feed");
             return (
               <button
                 key={label}
-                onClick={() => navigate(path)}
+                onClick={() => {
+                  if (path === "__menu__") {
+                    setShowMobileMenu(true);
+                  } else {
+                    navigate(path);
+                  }
+                }}
                 className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
                   isActive ? "text-[#1877F2]" : "text-[#65676B]"
                 }`}
@@ -327,6 +343,76 @@ export function SocialNavbar() {
           })}
         </div>
       </nav>
+
+      {/* ─── MOBILE MENU SHEET ─── */}
+      <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+        <SheetContent side="bottom" className="bg-white rounded-t-2xl px-0 pb-8">
+          <SheetHeader className="px-5 pb-3 border-b border-gray-100">
+            <SheetTitle className="text-[17px] font-bold text-[#1C1E21]">Menu</SheetTitle>
+          </SheetHeader>
+          <div className="py-2">
+            {/* Profile row */}
+            <button
+              onClick={() => { setShowMobileMenu(false); navigate("/profile"); }}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#F2F3F5] transition-colors"
+            >
+              <UserAvatar user={user} size="md" />
+              <div className="text-left">
+                <p className="font-semibold text-[15px] text-[#1C1E21]">{user?.display_name || "User"}</p>
+                <p className="text-[12px] text-[#65676B]">View your profile</p>
+              </div>
+            </button>
+
+            <div className="h-px bg-gray-100 my-2" />
+
+            {/* Switch to Chat */}
+            <button
+              onClick={() => { setShowMobileMenu(false); navigate("/chat"); }}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#F2F3F5] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#EFF1F5] flex items-center justify-center">
+                <MessageCircle className="w-4.5 h-4.5 text-[#1C1E21]" />
+              </div>
+              <span className="text-[15px] text-[#1C1E21]">Switch to Chat</span>
+            </button>
+
+            {/* Switch Mode */}
+            <button
+              onClick={() => { setShowMobileMenu(false); navigate("/home"); }}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#F2F3F5] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#EFF1F5] flex items-center justify-center">
+                <Zap className="w-4.5 h-4.5 text-[#4ECDC4]" />
+              </div>
+              <span className="text-[15px] text-[#1C1E21]">Switch Mode</span>
+            </button>
+
+            {/* Settings */}
+            <button
+              onClick={() => { setShowMobileMenu(false); }}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#F2F3F5] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#EFF1F5] flex items-center justify-center">
+                <Settings className="w-4.5 h-4.5 text-[#1C1E21]" />
+              </div>
+              <span className="text-[15px] text-[#1C1E21]">Settings & Privacy</span>
+            </button>
+
+            <div className="h-px bg-gray-100 my-2" />
+
+            {/* Sign Out */}
+            <button
+              onClick={() => { setShowMobileMenu(false); handleSignOut(); }}
+              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#F2F3F5] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#EFF1F5] flex items-center justify-center">
+                <LogOut className="w-4.5 h-4.5 text-[#E41E3F]" />
+              </div>
+              <span className="text-[15px] text-[#E41E3F]">Sign Out</span>
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

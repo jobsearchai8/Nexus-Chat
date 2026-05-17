@@ -7,8 +7,16 @@
 
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, Users, ArrowRight, Zap, Globe, Shield } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
+import { MessageSquare, Users, ArrowRight, Zap, Globe, Shield, LogOut, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2fgaxJv4JtYGP66iKhZqNw/nexus-hero-banner-PiGowhhyYB6CXWmjnt9xJB.webp";
 const CHAT_ICON = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2fgaxJv4JtYGP66iKhZqNw/nexus-chat-mode-icon-3X8Cs6b7FK2gyjBcbgEqpE.webp";
@@ -16,7 +24,12 @@ const SOCIAL_ICON = "https://d2xsxph8kpxj0f.cloudfront.net/310519663435216308/2f
 
 export default function ModeSelector() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] relative overflow-hidden">
@@ -35,13 +48,44 @@ export default function ModeSelector() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="flex items-center justify-center gap-3 mb-6 relative">
             <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
               <Zap className="w-6 h-6 text-[#4ECDC4]" />
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Nexus Networks
             </h1>
+
+            {/* User menu / Logout — absolute top-right */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors">
+                    <UserAvatar user={user} size="sm" />
+                    <ChevronDown className="w-3.5 h-3.5 text-white/70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[220px] bg-white border-gray-200/80 shadow-xl rounded-xl p-1.5">
+                  <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#F2F3F5] cursor-pointer">
+                    <UserAvatar user={user} size="sm" />
+                    <div>
+                      <p className="font-semibold text-[#1C1E21] text-[13px]">{user?.display_name || "User"}</p>
+                      <p className="text-[#65676B] text-[11px]">{user?.email}</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#F2F3F5] cursor-pointer text-[#1C1E21]"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#EFF1F5] flex items-center justify-center">
+                      <LogOut className="w-4 h-4" />
+                    </div>
+                    <span className="text-[14px]">Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <p className="text-white/80 text-lg max-w-md mx-auto">
             Welcome back{user?.display_name ? `, ${user.display_name}` : ""}! Choose how you want to connect today.
