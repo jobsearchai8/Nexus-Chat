@@ -27,6 +27,7 @@ interface SocialContextType {
   sendFriendRequest: (userId: string) => void;
   markNotificationRead: (notifId: string) => void;
   markAllNotificationsRead: () => void;
+  deleteNotification: (notifId: string) => void;
   unreadNotifCount: number;
 }
 
@@ -182,6 +183,10 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }, []);
 
+  const deleteNotification = useCallback((notifId: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
+  }, []);
+
   return (
     <SocialContext.Provider
       value={{
@@ -201,6 +206,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
         sendFriendRequest,
         markNotificationRead,
         markAllNotificationsRead,
+        deleteNotification,
         unreadNotifCount,
       }}
     >

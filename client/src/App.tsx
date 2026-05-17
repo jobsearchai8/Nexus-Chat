@@ -14,6 +14,7 @@ import ModeSelector from "@/pages/ModeSelector";
 import Feed from "@/pages/Feed";
 import Profile from "@/pages/Profile";
 import Friends from "@/pages/Friends";
+import Notifications from "@/pages/Notifications";
 import ProtectedRoute from "@/components/ProtectedRoute";
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -40,6 +41,11 @@ function Router() {
       <Route path="/friends">
         <ProtectedRoute>
           <Friends />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/notifications">
+        <ProtectedRoute>
+          <Notifications />
         </ProtectedRoute>
       </Route>
       <Route path="/chat">

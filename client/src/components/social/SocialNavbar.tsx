@@ -80,7 +80,7 @@ export function SocialNavbar() {
     { icon: Home, label: "Home", path: "/feed" },
     { icon: Users, label: "Friends", path: "/friends" },
     { icon: Compass, label: "Discover", path: "/feed" },
-    { icon: Bell, label: "Alerts", path: "/feed", badge: unreadNotifCount },
+    { icon: Bell, label: "Alerts", path: "/notifications", badge: unreadNotifCount },
     { icon: Menu, label: "Menu", path: "__menu__" },
   ];
 

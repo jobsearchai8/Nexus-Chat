@@ -84,8 +84,10 @@ export default function MessageComposer() {
           });
         } else {
           const type = attachedFile.type.startsWith("image/") ? "image" : "file";
+          // For demo mode: use data URL for images, object URL for other files
+          const fileUrl = attachedPreview || URL.createObjectURL(attachedFile);
           await sendMessage(content || attachedFile.name, type as any, {
-            url: attachedPreview || "#",
+            url: fileUrl,
             name: attachedFile.name,
             size: attachedFile.size,
             type: attachedFile.type,
