@@ -8,9 +8,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 
-// Client ID from Vercel environment variables
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-
 function base64URLEncode(buffer: Buffer): string {
   return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
@@ -20,7 +17,8 @@ function sha256(str: string): Buffer {
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  if (!GOOGLE_CLIENT_ID) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
     return res.status(500).json({ error: "GOOGLE_CLIENT_ID not configured" });
   }
 
@@ -42,7 +40,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   // Build Google authorization URL
   const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",

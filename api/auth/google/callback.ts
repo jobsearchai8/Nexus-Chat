@@ -10,12 +10,6 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// All secrets come from Vercel environment variables — never hardcode
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const SUPABASE_URL = process.env.SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
-
 function parseCookies(cookieHeader: string | undefined): Record<string, string> {
   const cookies: Record<string, string> = {};
   if (!cookieHeader) return cookies;
@@ -27,9 +21,13 @@ function parseCookies(cookieHeader: string | undefined): Record<string, string> 
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Validate that required env vars are set
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error("[Google OAuth] Missing required environment variables");
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+  if (!clientId || !clientSecret || !supabaseUrl || !supabaseAnonKey) {
+    console.error("[Google OAuth] Missing environment variables");
     return res.redirect(302, "/login?error=server_config");
   }
 
@@ -69,8 +67,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code: code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
         code_verifier: codeVerifier,
@@ -92,11 +90,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Step 2: Use the id_token to sign in with Supabase
-    const supabaseResponse = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
+    const supabaseResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
+        "apikey": supabaseAnonKey,
       },
       body: JSON.stringify({
         provider: "google",
