@@ -24,6 +24,7 @@ interface ChatContextType {
   createChannel: (name: string, description: string, type: Channel["type"], isPrivate: boolean) => Promise<Channel>;
   searchMessages: (query: string) => Message[];
   setTyping: (channelId: string) => void;
+  toggleReaction: (messageId: string, emoji: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -302,6 +303,63 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [user, isDemo]
   );
 
+  const toggleReaction = useCallback(
+    (messageId: string, emoji: string) => {
+      if (!user) return;
+
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const reactions = m.reactions || [];
+          const existing = reactions.find(
+            (r) => r.emoji === emoji && r.user_id === user.id
+          );
+          if (existing) {
+            // Remove reaction
+            return {
+              ...m,
+              reactions: reactions.filter((r) => r.id !== existing.id),
+            };
+          } else {
+            // Add reaction
+            return {
+              ...m,
+              reactions: [
+                ...reactions,
+                {
+                  id: `reaction-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                  message_id: messageId,
+                  user_id: user.id,
+                  emoji,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+        })
+      );
+
+      // If not demo, persist to Supabase
+      if (!isDemo && supabase) {
+        // Check if reaction exists and toggle
+        const msg = messages.find((m) => m.id === messageId);
+        const existingReaction = msg?.reactions?.find(
+          (r) => r.emoji === emoji && r.user_id === user.id
+        );
+        if (existingReaction) {
+          supabase.from("reactions").delete().eq("id", existingReaction.id);
+        } else {
+          supabase.from("reactions").insert({
+            message_id: messageId,
+            user_id: user.id,
+            emoji,
+          });
+        }
+      }
+    },
+    [user, isDemo, messages]
+  );
+
   return (
     <ChatContext.Provider
       value={{
@@ -318,6 +376,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         createChannel,
         searchMessages,
         setTyping,
+        toggleReaction,
       }}
     >
       {children}
