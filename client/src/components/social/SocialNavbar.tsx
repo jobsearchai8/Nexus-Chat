@@ -71,14 +71,14 @@ export function SocialNavbar() {
 
   const centerTabs = [
     { icon: Home, label: "Home", path: "/feed" },
-    { icon: Users, label: "Network", path: "/feed" },
+    { icon: Users, label: "Friends", path: "/friends" },
     { icon: Film, label: "Watch", path: "/feed" },
     { icon: Compass, label: "Discover", path: "/feed" },
   ];
 
   const mobileBottomTabs = [
     { icon: Home, label: "Home", path: "/feed" },
-    { icon: Users, label: "Network", path: "/feed" },
+    { icon: Users, label: "Friends", path: "/friends" },
     { icon: Compass, label: "Discover", path: "/feed" },
     { icon: Bell, label: "Alerts", path: "/feed", badge: unreadNotifCount },
     { icon: Menu, label: "Menu", path: "__menu__" },
@@ -141,7 +141,7 @@ export function SocialNavbar() {
           {/* Center: Tab Navigation (desktop) */}
           <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center max-w-[520px]">
             {centerTabs.map(({ icon: Icon, label, path }) => {
-              const isActive = label === "Home" && location === "/feed";
+              const isActive = location === path;
               return (
                 <button
                   key={label}
@@ -309,7 +309,7 @@ export function SocialNavbar() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/80 safe-area-bottom">
         <div className="flex items-center justify-around h-14 px-1">
           {mobileBottomTabs.map(({ icon: Icon, label, path, badge }) => {
-            const isActive = (label === "Home" && location === "/feed");
+            const isActive = path !== "__menu__" && location === path;
             return (
               <button
                 key={label}

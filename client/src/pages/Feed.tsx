@@ -70,7 +70,7 @@ export default function Feed() {
 
   const navItems = [
     { icon: Home, label: "News Feed", active: true },
-    { icon: Users, label: "Friends", active: false },
+    { icon: Users, label: "Friends", active: false, onClick: () => navigate("/friends") },
     { icon: MessageCircle, label: "Messages", onClick: () => navigate("/chat") },
     { icon: Film, label: "Watch", active: false },
     { icon: ShoppingBag, label: "Marketplace", active: false },

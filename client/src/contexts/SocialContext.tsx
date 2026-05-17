@@ -148,8 +148,29 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sendFriendRequest = useCallback((userId: string) => {
+    // Prevent duplicate requests
+    setFriendRequests((prev) => {
+      const alreadySent = prev.some(
+        (fr) => (fr.from_user_id === user?.id && fr.to_user_id === userId) ||
+                (fr.from_user_id === userId && fr.to_user_id === user?.id)
+      );
+      if (alreadySent) return prev;
+
+      // Find the user in suggested friends or chat users
+      const targetUser = suggestedFriends.find((u) => u.id === userId);
+      const newRequest: FriendRequest = {
+        id: `fr-${Date.now()}`,
+        from_user_id: user?.id || "user-1",
+        to_user_id: userId,
+        status: "pending",
+        created_at: new Date().toISOString(),
+        from_user: user || undefined,
+      };
+      return [...prev, newRequest];
+    });
+    // Remove from suggestions
     setSuggestedFriends((prev) => prev.filter((u) => u.id !== userId));
-  }, []);
+  }, [user, suggestedFriends]);
 
   const markNotificationRead = useCallback((notifId: string) => {
     setNotifications((prev) =>

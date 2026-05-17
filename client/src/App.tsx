@@ -13,9 +13,10 @@ import Chat from "@/pages/Chat";
 import ModeSelector from "@/pages/ModeSelector";
 import Feed from "@/pages/Feed";
 import Profile from "@/pages/Profile";
+import Friends from "@/pages/Friends";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Login} />
@@ -34,6 +35,11 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/friends">
+        <ProtectedRoute>
+          <Friends />
         </ProtectedRoute>
       </Route>
       <Route path="/chat">
