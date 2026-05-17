@@ -2,8 +2,9 @@
  * Auth Context — Nexus Networks
  * ─────────────────────────
  * Handles authentication state with Supabase or demo mode.
- * Uses Supabase's signInWithOAuth for Google login (redirect-based).
- * This is more reliable than GIS signInWithIdToken on deployed sites.
+ * Uses Google Identity Services (GIS) popup for Google login.
+ * This shows "nexus-networks.vercel.app" in Google prompt (not supabase.co),
+ * only one Google prompt, and is fast/efficient.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
@@ -12,6 +13,7 @@ import { mockCurrentUser } from "@/lib/mockData";
 import type { User } from "@/lib/types";
 
 const DEMO_SESSION_KEY = "nexus_demo_user";
+const GOOGLE_CLIENT_ID = "255852212484-k5userbqmr03lb5kn2r4vlosgt54bsn4.apps.googleusercontent.com";
 
 interface AuthContextType {
   user: User | null;
@@ -27,11 +29,36 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Load Google Identity Services script
+function loadGoogleScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (document.getElementById("google-gis-script")) {
+      resolve();
+      return;
+    }
+    // Check if already loaded
+    if ((window as any).google?.accounts?.id) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "google-gis-script";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Identity Services"));
+    document.head.appendChild(script);
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const isDemo = !isSupabaseConfigured;
   const mountedRef = useRef(true);
+  const googleInitializedRef = useRef(false);
+  const credentialCallbackRef = useRef<((response: any) => void) | null>(null);
 
   // Persist demo user to sessionStorage whenever it changes
   useEffect(() => {
@@ -92,29 +119,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return buildUserFromSession(sessionUser);
     };
 
+    // Check for existing session first
+    supabase!.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mountedRef.current) return;
+
+      if (session?.user) {
+        const userProfile = await fetchUserProfile(session.user);
+        if (mountedRef.current && userProfile) {
+          setUser(userProfile);
+        }
+      }
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
+    });
+
     // Set up the auth state change listener
     const { data: { subscription } } = supabase!.auth.onAuthStateChange(
       async (event, session) => {
         if (!mountedRef.current) return;
 
-        console.log("[Auth] Event:", event, "Session:", !!session);
-
-        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-          // Small delay to let Supabase settle
-          await new Promise((resolve) => setTimeout(resolve, 500));
-
-          if (!mountedRef.current) return;
-
+        if (event === "SIGNED_IN" && session?.user) {
           const userProfile = await fetchUserProfile(session.user);
           if (mountedRef.current && userProfile) {
             setUser(userProfile);
-            console.log("[Auth] User set:", userProfile.display_name);
-          }
-          if (mountedRef.current) {
-            setIsLoading(false);
-          }
-        } else if (event === "INITIAL_SESSION" && !session) {
-          if (mountedRef.current) {
             setIsLoading(false);
           }
         } else if (event === "SIGNED_OUT") {
@@ -122,30 +150,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             setIsLoading(false);
           }
-        } else if (event === "TOKEN_REFRESHED" && session?.user) {
-          if (!user && mountedRef.current) {
-            const userProfile = await fetchUserProfile(session.user);
-            if (mountedRef.current && userProfile) {
-              setUser(userProfile);
-            }
-          }
         }
       }
     );
 
-    // Safety timeout — if auth state hasn't resolved in 6 seconds, stop loading
-    const safetyTimeout = setTimeout(() => {
-      if (mountedRef.current && isLoading) {
-        console.log("[Auth] Safety timeout triggered — stopping loading");
-        setIsLoading(false);
-      }
-    }, 6000);
-
     return () => {
       mountedRef.current = false;
       subscription.unsubscribe();
-      clearTimeout(safetyTimeout);
     };
+  }, [isDemo]);
+
+  // Initialize Google Identity Services
+  useEffect(() => {
+    if (isDemo || googleInitializedRef.current) return;
+
+    loadGoogleScript().then(() => {
+      const goog = (window as any).google;
+      if (!goog?.accounts?.id) return;
+
+      goog.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: any) => {
+          if (credentialCallbackRef.current) {
+            credentialCallbackRef.current(response);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      googleInitializedRef.current = true;
+    }).catch(console.error);
   }, [isDemo]);
 
   const signIn = useCallback(async (email: string, _password: string) => {
@@ -177,35 +212,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, [isDemo]);
 
-  // Google sign-in using Supabase OAuth redirect flow
+  // Google sign-in using GIS popup + signInWithIdToken
+  // This shows "nexus-networks.vercel.app" in Google prompt, not supabase.co
+  // Only one Google prompt, fast and efficient
   const signInWithGoogle = useCallback(async () => {
     if (isDemo) {
       setUser(mockCurrentUser);
       return;
     }
 
-    const { error } = await supabase!.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin + "/home",
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    });
+    // Ensure Google script is loaded
+    await loadGoogleScript();
 
-    if (error) {
-      console.error("[Auth] Google OAuth error:", error);
-      throw error;
+    const goog = (window as any).google;
+    if (!goog?.accounts?.id) {
+      throw new Error("Google Identity Services not available");
     }
-    // The browser will redirect to Google, then back to our app
+
+    // Re-initialize to ensure callback is fresh
+    return new Promise<void>((resolve, reject) => {
+      credentialCallbackRef.current = async (response: any) => {
+        if (!response.credential) {
+          reject(new Error("No credential received from Google"));
+          return;
+        }
+
+        try {
+          const { error } = await supabase!.auth.signInWithIdToken({
+            provider: "google",
+            token: response.credential,
+          });
+
+          if (error) {
+            console.error("[Auth] signInWithIdToken error:", error);
+            reject(error);
+          } else {
+            resolve();
+          }
+        } catch (e) {
+          console.error("[Auth] Exception during signInWithIdToken:", e);
+          reject(e);
+        }
+      };
+
+      // Trigger Google One Tap / popup
+      goog.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed()) {
+          // If One Tap is blocked, fall back to OAuth popup
+          console.log("[Auth] One Tap not displayed, reason:", notification.getNotDisplayedReason());
+          const tokenClient = goog.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: "openid email profile",
+            callback: async (tokenResponse: any) => {
+              if (tokenResponse.error) {
+                reject(new Error(tokenResponse.error));
+                return;
+              }
+              // Fallback: use signInWithOAuth redirect
+              try {
+                const { error } = await supabase!.auth.signInWithOAuth({
+                  provider: "google",
+                  options: {
+                    redirectTo: window.location.origin + "/home",
+                    skipBrowserRedirect: false,
+                  },
+                });
+                if (error) reject(error);
+                else resolve();
+              } catch (e) {
+                reject(e);
+              }
+            },
+          });
+          tokenClient.requestAccessToken();
+        } else if (notification.isSkippedMoment()) {
+          console.log("[Auth] One Tap skipped, reason:", notification.getSkippedReason());
+        }
+      });
+    });
   }, [isDemo]);
 
-  // renderGoogleButton is kept for API compatibility but now just renders a styled button
-  const renderGoogleButton = useCallback((_element: HTMLElement) => {
-    // No-op — we now use the redirect-based flow via signInWithGoogle
-  }, []);
+  // Render Google Sign-In button (One Tap style)
+  const renderGoogleButton = useCallback((element: HTMLElement) => {
+    const goog = (window as any).google;
+    if (isDemo || !goog?.accounts?.id) return;
+
+    goog.accounts.id.renderButton(element, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "continue_with",
+      shape: "rectangular",
+      width: element.offsetWidth || 320,
+    });
+  }, [isDemo]);
 
   const signOut = useCallback(async () => {
     if (isDemo) {
@@ -214,9 +314,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { error } = await supabase!.auth.signOut();
-    if (error) throw error;
+    try {
+      // Sign out from Supabase
+      await supabase!.auth.signOut();
+    } catch (e) {
+      console.error("[Auth] Sign out error:", e);
+    }
+
+    // Always clear local state regardless of Supabase response
     setUser(null);
+
+    // Revoke Google session if available
+    const goog = (window as any).google;
+    if (goog?.accounts?.id) {
+      goog.accounts.id.disableAutoSelect();
+    }
   }, [isDemo]);
 
   const updateProfile = useCallback(async (data: Partial<User>) => {
@@ -261,3 +373,5 @@ export function useAuth() {
   }
   return context;
 }
+
+// Use (window as any).google to avoid conflicts with Map.tsx google types
